@@ -1,4 +1,4 @@
-# 🚀 Deployment Guide - Covera Shoes
+# 🚀 Deployment Guide - Vesto Shoes
 
 ## Quick Deploy Options
 

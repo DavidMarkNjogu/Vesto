@@ -1,4 +1,4 @@
-# 👟 Covera Shoes - Complete E-Commerce MVP
+# 👟 Vesto Shoes - Complete E-Commerce MVP
 
 A fully functional, offline-capable shoe e-commerce platform built with MERN stack, inspired by Nike and Kicks Kenya.
 
@@ -66,7 +66,7 @@ A fully functional, offline-capable shoe e-commerce platform built with MERN sta
 
 1. **Clone and navigate:**
 ```bash
-cd covera-shoes
+cd vesto-shoes
 ```
 
 2. **Install server dependencies:**
@@ -165,7 +165,7 @@ The service worker is automatically registered in `client/index.html`. It caches
 ## 📂 Project Structure
 
 ```
-covera-shoes/
+vesto-shoes/
 ├── server/
 │   ├── server.js          # Express API
 │   ├── package.json

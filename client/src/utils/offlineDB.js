@@ -1,7 +1,7 @@
 // IndexedDB wrapper for offline storage
 class OfflineDB {
   constructor() {
-    this.dbName = 'CoveraShoesDB';
+    this.dbName = 'VestoShoesDB';
     this.version = 1;
     this.db = null;
   }

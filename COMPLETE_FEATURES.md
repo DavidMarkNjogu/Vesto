@@ -1,4 +1,4 @@
-# ✅ Complete Feature List - Covera Shoes MVP
+# ✅ Complete Feature List - Vesto Shoes MVP
 
 ## 🎯 ALL FEATURES IMPLEMENTED
 
@@ -118,7 +118,7 @@
    - ✅ Clean, minimal UI
    - ✅ Product page structure
 
-3. **Covera Branding**
+3. **Vesto Branding**
    - ✅ Primary color: #358c9c (Teal)
    - ✅ Secondary color: #f68716 (Orange)
    - ✅ Background: #f5f5f5

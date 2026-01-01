@@ -157,7 +157,7 @@ const Checkout = () => {
               <h2 className="card-title justify-center text-3xl mb-2 text-primary">
                 🎉 Order Placed Successfully!
               </h2>
-              <p className="text-gray-600">Thank you for shopping with Covera Shoes</p>
+              <p className="text-gray-600">Thank you for shopping with Vesto Shoes</p>
             </div>
             <div className="divider"></div>
             <div className="space-y-3 mb-6 text-left">

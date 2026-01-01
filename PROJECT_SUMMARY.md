@@ -1,4 +1,4 @@
-# 🎉 Covera Shoes - Complete MVP Summary
+# 🎉 Vesto Shoes - Complete MVP Summary
 
 ## ✅ EVERYTHING HAS BEEN IMPLEMENTED
 
@@ -40,7 +40,7 @@ A **fully functional, production-ready** e-commerce MVP with:
 #### 🎨 Design Integration
 - ✅ Nike-inspired product pages
 - ✅ Kicks Kenya-inspired checkout
-- ✅ Covera brand colors
+- ✅ Vesto brand colors
 - ✅ Modern, clean UI
 - ✅ Smooth animations
 - ✅ Professional look

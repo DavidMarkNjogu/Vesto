@@ -1,5 +1,5 @@
 {
-  "name": "covera-server",
+  "name": "vesto-server",
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js"

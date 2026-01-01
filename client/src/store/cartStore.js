@@ -83,7 +83,7 @@ const useCartStore = create(
       },
     }),
     {
-      name: 'covera-cart',
+      name: 'vesto-cart',
     }
   )
 );

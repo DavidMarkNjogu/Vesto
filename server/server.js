@@ -12,7 +12,7 @@ app.use(express.json());
 const MOCK_PRODUCTS = [
   { 
     _id: '1', 
-    title: 'Covera Classic Sneakers', 
+    title: 'Vesto Classic Sneakers', 
     price: 4500, 
     image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop',
     description: 'Premium classic sneakers perfect for everyday wear',
@@ -22,7 +22,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '2', 
-    title: 'Covera Leather Boots', 
+    title: 'Vesto Leather Boots', 
     price: 7800, 
     image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop',
     description: 'Durable leather boots for all weather conditions',
@@ -32,7 +32,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '3', 
-    title: 'Covera Running Shoes', 
+    title: 'Vesto Running Shoes', 
     price: 3800, 
     image: 'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600&h=600&fit=crop',
     description: 'Lightweight running shoes with superior comfort',
@@ -42,7 +42,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '4', 
-    title: 'Covera Sport Sandals', 
+    title: 'Vesto Sport Sandals', 
     price: 3200, 
     image: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=600&h=600&fit=crop',
     description: 'Comfortable sport sandals for casual wear',
@@ -52,7 +52,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '5', 
-    title: 'Covera High-Top Sneakers', 
+    title: 'Vesto High-Top Sneakers', 
     price: 5200, 
     image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=600&fit=crop',
     description: 'Stylish high-top sneakers with modern design',
@@ -62,7 +62,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '6', 
-    title: 'Covera Casual Loafers', 
+    title: 'Vesto Casual Loafers', 
     price: 4100, 
     image: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=600&fit=crop',
     description: 'Elegant loafers for business and casual occasions',
@@ -72,7 +72,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '7', 
-    title: 'Covera Basketball Shoes', 
+    title: 'Vesto Basketball Shoes', 
     price: 6200, 
     image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&h=600&fit=crop',
     description: 'High-performance basketball shoes with excellent grip',
@@ -82,7 +82,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '8', 
-    title: 'Covera Canvas Sneakers', 
+    title: 'Vesto Canvas Sneakers', 
     price: 3500, 
     image: 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=600&fit=crop',
     description: 'Classic canvas sneakers with timeless style',
@@ -92,7 +92,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '9', 
-    title: 'Covera Hiking Boots', 
+    title: 'Vesto Hiking Boots', 
     price: 8900, 
     image: 'https://images.unsplash.com/photo-1544966503-7d0c2a4c8c8c?w=600&h=600&fit=crop',
     description: 'Rugged hiking boots for outdoor adventures',
@@ -102,7 +102,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '10', 
-    title: 'Covera Slip-On Sneakers', 
+    title: 'Vesto Slip-On Sneakers', 
     price: 3900, 
     image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop',
     description: 'Convenient slip-on design for easy wear',
@@ -112,7 +112,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '11', 
-    title: 'Covera Dress Shoes', 
+    title: 'Vesto Dress Shoes', 
     price: 5500, 
     image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop',
     description: 'Elegant dress shoes for formal occasions',
@@ -122,7 +122,7 @@ const MOCK_PRODUCTS = [
   },
   { 
     _id: '12', 
-    title: 'Covera Trail Running', 
+    title: 'Vesto Trail Running', 
     price: 4800, 
     image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop',
     description: 'Trail running shoes with superior traction',
@@ -190,18 +190,18 @@ async function seedProducts() {
   try {
     await Product.deleteMany({});
     await Product.insertMany([
-      { title: 'Covera Classic Sneakers', price: 4500, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop', buyingPrice: 2800, category: 'Sneakers', rating: 4.8 },
-      { title: 'Covera Leather Boots', price: 7800, image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop', buyingPrice: 5200, category: 'Boots', rating: 4.9 },
-      { title: 'Covera Running Shoes', price: 3800, image: 'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600&h=600&fit=crop', buyingPrice: 2200, category: 'Athletic', rating: 4.7 },
-      { title: 'Covera Sport Sandals', price: 3200, image: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=600&h=600&fit=crop', buyingPrice: 2000, category: 'Sandals', rating: 4.5 },
-      { title: 'Covera High-Top Sneakers', price: 5200, image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=600&fit=crop', buyingPrice: 3200, category: 'Sneakers', rating: 4.6 },
-      { title: 'Covera Casual Loafers', price: 4100, image: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=600&fit=crop', buyingPrice: 2600, category: 'Formal', rating: 4.8 },
-      { title: 'Covera Basketball Shoes', price: 6200, image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&h=600&fit=crop', buyingPrice: 4000, category: 'Athletic', rating: 4.9 },
-      { title: 'Covera Canvas Sneakers', price: 3500, image: 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=600&fit=crop', buyingPrice: 2200, category: 'Sneakers', rating: 4.6 },
-      { title: 'Covera Hiking Boots', price: 8900, image: 'https://images.unsplash.com/photo-1544966503-7d0c2a4c8c8c?w=600&h=600&fit=crop', buyingPrice: 5800, category: 'Boots', rating: 4.9 },
-      { title: 'Covera Slip-On Sneakers', price: 3900, image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop', buyingPrice: 2500, category: 'Sneakers', rating: 4.7 },
-      { title: 'Covera Dress Shoes', price: 5500, image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop', buyingPrice: 3500, category: 'Formal', rating: 4.8 },
-      { title: 'Covera Trail Running', price: 4800, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop', buyingPrice: 3000, category: 'Athletic', rating: 4.7 }
+      { title: 'Vesto Classic Sneakers', price: 4500, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop', buyingPrice: 2800, category: 'Sneakers', rating: 4.8 },
+      { title: 'Vesto Leather Boots', price: 7800, image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop', buyingPrice: 5200, category: 'Boots', rating: 4.9 },
+      { title: 'Vesto Running Shoes', price: 3800, image: 'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600&h=600&fit=crop', buyingPrice: 2200, category: 'Athletic', rating: 4.7 },
+      { title: 'Vesto Sport Sandals', price: 3200, image: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=600&h=600&fit=crop', buyingPrice: 2000, category: 'Sandals', rating: 4.5 },
+      { title: 'Vesto High-Top Sneakers', price: 5200, image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=600&fit=crop', buyingPrice: 3200, category: 'Sneakers', rating: 4.6 },
+      { title: 'Vesto Casual Loafers', price: 4100, image: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=600&fit=crop', buyingPrice: 2600, category: 'Formal', rating: 4.8 },
+      { title: 'Vesto Basketball Shoes', price: 6200, image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&h=600&fit=crop', buyingPrice: 4000, category: 'Athletic', rating: 4.9 },
+      { title: 'Vesto Canvas Sneakers', price: 3500, image: 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=600&fit=crop', buyingPrice: 2200, category: 'Sneakers', rating: 4.6 },
+      { title: 'Vesto Hiking Boots', price: 8900, image: 'https://images.unsplash.com/photo-1544966503-7d0c2a4c8c8c?w=600&h=600&fit=crop', buyingPrice: 5800, category: 'Boots', rating: 4.9 },
+      { title: 'Vesto Slip-On Sneakers', price: 3900, image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop', buyingPrice: 2500, category: 'Sneakers', rating: 4.7 },
+      { title: 'Vesto Dress Shoes', price: 5500, image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop', buyingPrice: 3500, category: 'Formal', rating: 4.8 },
+      { title: 'Vesto Trail Running', price: 4800, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop', buyingPrice: 3000, category: 'Athletic', rating: 4.7 }
     ]);
     console.log('✅ Products seeded successfully');
   } catch (error) {

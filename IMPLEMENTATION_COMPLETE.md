@@ -1,4 +1,4 @@
-# ✅ IMPLEMENTATION COMPLETE - Covera Shoes MVP
+# ✅ IMPLEMENTATION COMPLETE - Vesto Shoes MVP
 
 ## 🎊 ALL FEATURES IMPLEMENTED
 
@@ -27,7 +27,7 @@
 - [x] Hero section
 - [x] Featured products section
 - [x] Modern, mobile-first design
-- [x] Covera brand colors (#358c9c, #f68716)
+- [x] Vesto brand colors (#358c9c, #f68716)
 
 ### ✅ Product Management
 - [x] Multiple image angles (1-5 images)
@@ -48,7 +48,7 @@
 ## 📁 Complete File Structure
 
 ```
-covera-shoes/
+vesto-shoes/
 ├── server/
 │   ├── server.js              ✅ Complete API
 │   ├── package.json            ✅ Dependencies
@@ -103,13 +103,13 @@ covera-shoes/
 
 ### Start Server
 ```bash
-cd covera-shoes/server
+cd vesto-shoes/server
 pnpm dev
 ```
 
 ### Start Client
 ```bash
-cd covera-shoes/client
+cd vesto-shoes/client
 pnpm dev
 ```
 
@@ -145,7 +145,7 @@ pnpm dev
 
 - **Nike-Style**: Product detail pages with image gallery
 - **Kicks Kenya-Style**: Clean checkout with optional fields
-- **Covera Brand**: Teal (#358c9c) and Orange (#f68716)
+- **Vesto Brand**: Teal (#358c9c) and Orange (#f68716)
 - **Mobile-First**: Beautiful on all devices
 - **Smooth Animations**: Professional feel
 

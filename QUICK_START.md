@@ -1,17 +1,17 @@
-# 🚀 Quick Start Guide - Covera Shoes MVP
+# 🚀 Quick Start Guide - Vesto Shoes MVP
 
 ## Start the Application
 
 ### Terminal 1 - Backend Server
 ```bash
-cd covera-shoes/server
+cd vesto-shoes/server
 pnpm dev
 ```
 Server runs on: http://localhost:5000
 
 ### Terminal 2 - Frontend Client
 ```bash
-cd covera-shoes/client
+cd vesto-shoes/client
 pnpm dev
 ```
 Client runs on: http://localhost:3000

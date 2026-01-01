@@ -1,4 +1,4 @@
-# Offline Functionality - Covera Shoes
+# Offline Functionality - Vesto Shoes
 
 ## ✅ Complete Offline Support Implemented
 

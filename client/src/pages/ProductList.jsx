@@ -119,7 +119,7 @@ const ProductList = () => {
       <div className="min-h-screen bg-bg py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl font-bold text-primary mb-8 text-center">
-            Covera Shoes - Kenyan Shoe Store
+            Vesto Shoes - Kenyan Shoe Store
           </h1>
           <div className="text-center py-12">
             <p className="text-xl text-gray-600 mb-4">No products available</p>
@@ -286,7 +286,7 @@ const ProductList = () => {
               >
                 <figure className="relative overflow-hidden">
                   <img
-                    src={product.image || 'https://via.placeholder.com/400x300?text=Covera+Shoes'}
+                    src={product.image || 'https://via.placeholder.com/400x300?text=Vesto+Shoes'}
                     alt={product.title}
                     className="w-full h-64 object-cover transition-transform duration-300 hover:scale-110"
                     loading="lazy"

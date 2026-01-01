@@ -1,6 +1,6 @@
 // Service Worker for Offline Functionality
-const CACHE_NAME = 'covera-shoes-v1';
-const RUNTIME_CACHE = 'covera-runtime-v1';
+const CACHE_NAME = 'vesto-shoes-v1';
+const RUNTIME_CACHE = 'vesto-runtime-v1';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -122,7 +122,7 @@ async function syncOrders() {
 // Helper function to open IndexedDB
 function openDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('CoveraShoesDB', 1);
+    const request = indexedDB.open('VestoShoesDB', 1);
     
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);

@@ -2,157 +2,59 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const Product = require('./models/Product'); // IMPORT THE NEW MODEL
+
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Mock products for when MongoDB is not available - High quality placeholder items
+// -----------------------------------------------------------------------------
+// MOCK DATA (New Structure: Parent + Variants)
+// -----------------------------------------------------------------------------
 const MOCK_PRODUCTS = [
   { 
     _id: '1', 
     title: 'Vesto Classic Sneakers', 
     price: 4500, 
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop',
-    description: 'Premium classic sneakers perfect for everyday wear',
     category: 'Sneakers',
-    rating: 4.8,
-    inStock: true
+    description: 'Premium classic sneakers perfect for everyday wear',
+    images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop'],
+    variants: [
+      { sku: 'VES-CLS-WHT-40', color: 'White', size: '40', stock: 10, priceOverride: 4500 },
+      { sku: 'VES-CLS-WHT-41', color: 'White', size: '41', stock: 5, priceOverride: 4500 },
+      { sku: 'VES-CLS-BLK-40', color: 'Black', size: '40', stock: 8, priceOverride: 4500 }
+    ]
   },
   { 
     _id: '2', 
     title: 'Vesto Leather Boots', 
     price: 7800, 
-    image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop',
+    category: 'Boots',
     description: 'Durable leather boots for all weather conditions',
-    category: 'Boots',
-    rating: 4.9,
-    inStock: true
-  },
-  { 
-    _id: '3', 
-    title: 'Vesto Running Shoes', 
-    price: 3800, 
-    image: 'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600&h=600&fit=crop',
-    description: 'Lightweight running shoes with superior comfort',
-    category: 'Athletic',
-    rating: 4.7,
-    inStock: true
-  },
-  { 
-    _id: '4', 
-    title: 'Vesto Sport Sandals', 
-    price: 3200, 
-    image: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=600&h=600&fit=crop',
-    description: 'Comfortable sport sandals for casual wear',
-    category: 'Sandals',
-    rating: 4.5,
-    inStock: true
-  },
-  { 
-    _id: '5', 
-    title: 'Vesto High-Top Sneakers', 
-    price: 5200, 
-    image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=600&fit=crop',
-    description: 'Stylish high-top sneakers with modern design',
-    category: 'Sneakers',
-    rating: 4.6,
-    inStock: true
-  },
-  { 
-    _id: '6', 
-    title: 'Vesto Casual Loafers', 
-    price: 4100, 
-    image: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=600&fit=crop',
-    description: 'Elegant loafers for business and casual occasions',
-    category: 'Formal',
-    rating: 4.8,
-    inStock: true
-  },
-  { 
-    _id: '7', 
-    title: 'Vesto Basketball Shoes', 
-    price: 6200, 
-    image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&h=600&fit=crop',
-    description: 'High-performance basketball shoes with excellent grip',
-    category: 'Athletic',
-    rating: 4.9,
-    inStock: true
-  },
-  { 
-    _id: '8', 
-    title: 'Vesto Canvas Sneakers', 
-    price: 3500, 
-    image: 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=600&fit=crop',
-    description: 'Classic canvas sneakers with timeless style',
-    category: 'Sneakers',
-    rating: 4.6,
-    inStock: true
-  },
-  { 
-    _id: '9', 
-    title: 'Vesto Hiking Boots', 
-    price: 8900, 
-    image: 'https://images.unsplash.com/photo-1544966503-7d0c2a4c8c8c?w=600&h=600&fit=crop',
-    description: 'Rugged hiking boots for outdoor adventures',
-    category: 'Boots',
-    rating: 4.9,
-    inStock: true
-  },
-  { 
-    _id: '10', 
-    title: 'Vesto Slip-On Sneakers', 
-    price: 3900, 
-    image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop',
-    description: 'Convenient slip-on design for easy wear',
-    category: 'Sneakers',
-    rating: 4.7,
-    inStock: true
-  },
-  { 
-    _id: '11', 
-    title: 'Vesto Dress Shoes', 
-    price: 5500, 
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop',
-    description: 'Elegant dress shoes for formal occasions',
-    category: 'Formal',
-    rating: 4.8,
-    inStock: true
-  },
-  { 
-    _id: '12', 
-    title: 'Vesto Trail Running', 
-    price: 4800, 
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop',
-    description: 'Trail running shoes with superior traction',
-    category: 'Athletic',
-    rating: 4.7,
-    inStock: true
+    images: ['https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop'],
+    variants: [
+      { sku: 'VES-BOOT-BRN-42', color: 'Brown', size: '42', stock: 12, priceOverride: 7800 },
+      { sku: 'VES-BOOT-BLK-42', color: 'Black', size: '42', stock: 4, priceOverride: 7800 }
+    ]
   }
 ];
 
 let dbConnected = false;
-let Product, Order;
+let Order;
 
-// MongoDB connection with error handling
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/covershoes', {
+// -----------------------------------------------------------------------------
+// MONGODB CONNECTION
+// -----------------------------------------------------------------------------
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/vestoshoes', {
   serverSelectionTimeoutMS: 3000
 })
   .then(() => {
     console.log('✅ MongoDB connected');
     dbConnected = true;
-    
-    const productSchema = new mongoose.Schema({
-      title: String,
-      price: Number,
-      image: String,
-      description: String,
-      category: String,
-      rating: Number,
-      buyingPrice: { type: Number, select: false }
-    });
 
+    // Define Order Schema (Temporary inline)
     const orderSchema = new mongoose.Schema({
       phone: String,
       location: String,
@@ -160,93 +62,103 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/covershoes'
       total: Number,
       timestamp: { type: Date, default: Date.now }
     });
-
-    Product = mongoose.model('Product', productSchema);
-    Order = mongoose.model('Order', orderSchema);
     
+    Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
+    
+    // Seed the new data
     seedProducts();
   })
   .catch((err) => {
     console.log('⚠️  MongoDB not available. Running in mock mode.');
-    console.log('   Server will work with mock data. Start MongoDB for full functionality.');
+    // console.log(err.message); 
   });
 
 const SHIPPING_COSTS = {
-  'Nairobi CBD': 200, 
-  'Westlands': 250,
-  'Karen': 300,
-  'Nakuru': 300, 
-  'Eldoret': 400, 
-  'Mombasa': 500, 
-  'Kisumu': 350,
-  'Thika': 250,
-  'Nyeri': 350,
-  'Meru': 400
+  'Nairobi CBD': 200, 'Westlands': 250, 'Karen': 300,
+  'Nakuru': 300, 'Eldoret': 400, 'Mombasa': 500, 
+  'Kisumu': 350, 'Thika': 250
 };
 
-// Seed products
+// -----------------------------------------------------------------------------
+// SEEDING SCRIPT (Populates DB with Variant Data)
+// -----------------------------------------------------------------------------
 async function seedProducts() {
   if (!dbConnected) return;
   try {
+    // WIPE OLD DATA to prevent conflicts
     await Product.deleteMany({});
+    
+    console.log('🌱 Seeding Vesto Product/Variant data...');
+    
     await Product.insertMany([
-      { title: 'Vesto Classic Sneakers', price: 4500, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop', buyingPrice: 2800, category: 'Sneakers', rating: 4.8 },
-      { title: 'Vesto Leather Boots', price: 7800, image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop', buyingPrice: 5200, category: 'Boots', rating: 4.9 },
-      { title: 'Vesto Running Shoes', price: 3800, image: 'https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600&h=600&fit=crop', buyingPrice: 2200, category: 'Athletic', rating: 4.7 },
-      { title: 'Vesto Sport Sandals', price: 3200, image: 'https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=600&h=600&fit=crop', buyingPrice: 2000, category: 'Sandals', rating: 4.5 },
-      { title: 'Vesto High-Top Sneakers', price: 5200, image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&h=600&fit=crop', buyingPrice: 3200, category: 'Sneakers', rating: 4.6 },
-      { title: 'Vesto Casual Loafers', price: 4100, image: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&h=600&fit=crop', buyingPrice: 2600, category: 'Formal', rating: 4.8 },
-      { title: 'Vesto Basketball Shoes', price: 6200, image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&h=600&fit=crop', buyingPrice: 4000, category: 'Athletic', rating: 4.9 },
-      { title: 'Vesto Canvas Sneakers', price: 3500, image: 'https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=600&fit=crop', buyingPrice: 2200, category: 'Sneakers', rating: 4.6 },
-      { title: 'Vesto Hiking Boots', price: 8900, image: 'https://images.unsplash.com/photo-1544966503-7d0c2a4c8c8c?w=600&h=600&fit=crop', buyingPrice: 5800, category: 'Boots', rating: 4.9 },
-      { title: 'Vesto Slip-On Sneakers', price: 3900, image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600&h=600&fit=crop', buyingPrice: 2500, category: 'Sneakers', rating: 4.7 },
-      { title: 'Vesto Dress Shoes', price: 5500, image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop', buyingPrice: 3500, category: 'Formal', rating: 4.8 },
-      { title: 'Vesto Trail Running', price: 4800, image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop', buyingPrice: 3000, category: 'Athletic', rating: 4.7 }
+      { 
+        title: 'Vesto Classic Sneakers', 
+        price: 4500, 
+        category: 'Sneakers',
+        description: 'Premium classic sneakers perfect for everyday wear',
+        images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop'],
+        variants: [
+          { sku: 'VES-CLS-WHT-40', color: 'White', size: '40', stock: 10, priceOverride: 4500 },
+          { sku: 'VES-CLS-WHT-41', color: 'White', size: '41', stock: 8, priceOverride: 4500 },
+          { sku: 'VES-CLS-WHT-42', color: 'White', size: '42', stock: 0, priceOverride: 4500 }, // Out of stock
+          { sku: 'VES-CLS-BLK-40', color: 'Black', size: '40', stock: 5, priceOverride: 4500 }
+        ]
+      },
+      { 
+        title: 'Vesto Leather Boots', 
+        price: 7800, 
+        category: 'Boots',
+        description: 'Durable leather boots for all weather conditions',
+        images: ['https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop'],
+        variants: [
+          { sku: 'VES-BOOT-BRN-40', color: 'Brown', size: '40', stock: 5, priceOverride: 7800 },
+          { sku: 'VES-BOOT-BRN-41', color: 'Brown', size: '41', stock: 5, priceOverride: 7800 },
+          { sku: 'VES-BOOT-BRN-42', color: 'Brown', size: '42', stock: 2, priceOverride: 7800 }
+        ]
+      }
     ]);
-    console.log('✅ Products seeded successfully');
+    console.log('✅ Vesto Products seeded!');
   } catch (error) {
     console.error('❌ Error seeding products:', error.message);
   }
 }
 
+// -----------------------------------------------------------------------------
+// API ROUTES
+// -----------------------------------------------------------------------------
+
+// GET ALL PRODUCTS
 app.get('/api/products', async (req, res) => {
   try {
-    if (dbConnected && Product) {
-      const products = await Product.find({}, '-buyingPrice');
+    if (dbConnected) {
+      const products = await Product.find({});
       return res.json(products);
-    } else {
-      // Return mock data when DB is not connected
-      return res.json(MOCK_PRODUCTS);
     }
+    return res.json(MOCK_PRODUCTS);
   } catch (error) {
-    console.error('Error fetching products:', error);
-    // Fallback to mock data on error
     res.json(MOCK_PRODUCTS);
   }
 });
 
+// GET SINGLE PRODUCT
 app.get('/api/products/:id', async (req, res) => {
   try {
-    if (dbConnected && Product) {
-      const product = await Product.findById(req.params.id, '-buyingPrice');
-      if (!product) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      return res.json(product);
-    } else {
-      // Return mock product
-      const product = MOCK_PRODUCTS.find(p => p._id === req.params.id);
-      if (!product) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
+    if (dbConnected) {
+      const product = await Product.findById(req.params.id);
+      if (!product) return res.status(404).json({ error: 'Product not found' });
       return res.json(product);
     }
+    
+    // Mock Fallback
+    const product = MOCK_PRODUCTS.find(p => p._id === req.params.id);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    return res.json(product);
   } catch (error) {
-    console.error('Error fetching product:', error);
     res.status(500).json({ error: 'Failed to fetch product' });
   }
 });
 
+// CREATE ORDER
 app.post('/api/orders', async (req, res) => {
   try {
     const { phone, location, cartItems } = req.body;
@@ -262,80 +174,16 @@ app.post('/api/orders', async (req, res) => {
     if (dbConnected && Order) {
       const order = new Order({ phone, location, cartItems, total });
       await order.save();
-      return res.json({ success: true, subtotal, shipping, total, orderId: order._id });
-    } else {
-      // Mock order response when DB is not connected
-      const mockOrderId = 'mock_' + Date.now();
-      console.log('📦 Mock Order Created:', { phone, location, total, orderId: mockOrderId });
-      return res.json({ success: true, subtotal, shipping, total, orderId: mockOrderId });
+      // NOTE: In next steps we will add logic to subtract stock here
+      return res.json({ success: true, orderId: order._id });
     }
+    
+    const mockOrderId = 'mock_' + Date.now();
+    return res.json({ success: true, orderId: mockOrderId });
   } catch (error) {
     console.error('Error creating order:', error);
-    return res.status(500).json({ error: 'Failed to create order', message: error.message });
-  }
-});
-
-// Admin Dashboard Routes
-app.get('/api/admin/orders', async (req, res) => {
-  try {
-    if (dbConnected && Order) {
-      const orders = await Order.find().sort({ timestamp: -1 });
-      return res.json(orders);
-    } else {
-      // Return empty array in mock mode
-      return res.json([]);
-    }
-  } catch (error) {
-    console.error('Error fetching orders:', error);
-    return res.status(500).json({ error: 'Failed to fetch orders', message: error.message });
-  }
-});
-
-app.post('/api/admin/products', async (req, res) => {
-  try {
-    if (!dbConnected || !Product) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    const product = new Product(req.body);
-    await product.save();
-    res.json(product);
-  } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ error: 'Failed to create product', message: error.message });
-  }
-});
-
-app.put('/api/admin/products/:id', async (req, res) => {
-  try {
-    if (!dbConnected || !Product) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-    res.json(product);
-  } catch (error) {
-    console.error('Error updating product:', error);
-    res.status(500).json({ error: 'Failed to update product', message: error.message });
-  }
-});
-
-app.delete('/api/admin/products/:id', async (req, res) => {
-  try {
-    if (!dbConnected || !Product) {
-      return res.status(503).json({ error: 'Database not connected' });
-    }
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    res.status(500).json({ error: 'Failed to delete product', message: error.message });
+    return res.status(500).json({ error: 'Failed to create order' });
   }
 });
 
 app.listen(5000, () => console.log('🛍️ Server: http://localhost:5000'));
-

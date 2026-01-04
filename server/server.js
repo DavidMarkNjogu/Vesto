@@ -70,7 +70,6 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/vestoshoes'
   })
   .catch((err) => {
     console.log('⚠️  MongoDB not available. Running in mock mode.');
-    // console.log(err.message); 
   });
 
 const SHIPPING_COSTS = {

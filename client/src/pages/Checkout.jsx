@@ -60,7 +60,11 @@ const Checkout = () => {
 
     try {
       const cartItems = items.map((item) => ({
-        productId: item.id,
+        sku: item.sku,             // VITAL: The specific variant identifier
+        productId: item.productId, // Reference to parent
+        title: item.title,         // Snapshot for history
+        size: item.selectedSize,   // Snapshot
+        color: item.selectedColor, // Snapshot
         quantity: item.quantity,
         price: item.price,
       }));

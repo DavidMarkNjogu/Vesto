@@ -1,4 +1,4 @@
-// REMOVE "BrowserRouter as Router" from imports
+// REMOVE "BrowserRouter as Router" from imports - It is handled in main.jsx
 import { Routes, Route, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import ProductList from './pages/ProductList';
@@ -11,25 +11,31 @@ import { ShoppingCart, LayoutDashboard, WifiOff, Heart } from 'lucide-react';
 import { setupOfflineListeners, isOnline } from './utils/offlineSync';
 
 function App() {
-const { items, syncFromOffline } = useCartStore();
+  const { items, syncFromOffline } = useCartStore();
   
-  // ULTRA-SAFE FIX: Ensure it is an ARRAY. Old data might be an Object {} or null.
-  const safeItems = Array.isArray(items) ? items : []; 
+  // OG FIX: Force 'items' to be an array, no matter what garbage comes in.
+  // If items is null, undefined, or an object, we default to [].
+  const safeItems = Array.isArray(items) ? items : [];
   
+  // Safety: Ensure reduce only runs if safeItems is truly an array
   const cartCount = safeItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  
   const [online, setOnline] = useState(isOnline());
 
   useEffect(() => {
+    // Initial sync
     syncFromOffline();
+    
+    // Listen for network changes
     setupOfflineListeners(
       () => setOnline(true),
       () => setOnline(false)
     );
-  }, [syncFromOffline]);
+  }, []); // Added dependency array to run once
 
-  // REMOVED <Router> wrapper (It is now in main.jsx)
   return (
     <div className="min-h-screen bg-bg">
+      {/* Navbar */}
       <nav className="bg-primary text-white shadow-lg sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
@@ -74,6 +80,7 @@ const { items, syncFromOffline } = useCartStore();
         </div>
       </nav>
 
+      {/* Routes */}
       <Routes>
         <Route path="/" element={<ProductList />} />
         <Route path="/product/:id" element={<ProductDetail />} />
@@ -105,7 +112,7 @@ const { items, syncFromOffline } = useCartStore();
             </div>
           </div>
           <div className="border-t border-white/20 mt-8 pt-4 text-center text-gray-300">
-            <p>&copy; 2024 Vesto Shoes. All rights reserved.</p>
+            <p>&copy; 2026 Vesto Shoes. All rights reserved.</p>
           </div>
         </div>
       </footer>

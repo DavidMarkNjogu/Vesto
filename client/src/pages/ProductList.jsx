@@ -1,8 +1,7 @@
-
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useCartStore from '../store/cartStore';
-import { ShoppingCart, Plus, Minus, Search, Star, Filter, X, Eye } from 'lucide-react';
+import { ShoppingCart, Search, Star, Filter, X, Eye } from 'lucide-react';
 import { syncProducts } from '../utils/offlineSync';
 import Hero from '../components/Hero';
 import FeaturedProducts from '../components/FeaturedProducts';
@@ -20,7 +19,7 @@ const ProductList = () => {
   const [showFilters, setShowFilters] = useState(false);
   
   // Safe Store Access
-  const { items, addItem } = useCartStore();
+  const { items } = useCartStore();
 
   useEffect(() => {
     fetchProducts();
@@ -29,7 +28,7 @@ const ProductList = () => {
   const fetchProducts = async () => {
     try {
       const productsData = await syncProducts();
-      setProducts(productsData);
+      setProducts(productsData || []); // Ensure array
       setError(null);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -41,10 +40,10 @@ const ProductList = () => {
 
   // OG FIX: CRASH PREVENTION
   // We check if 'items' exists and is an array before trying to access it.
-  // We also sum up quantity of ALL variants of this product (e.g., Red 40 + Blue 41)
   const getProductCartCount = (productId) => {
     if (!items || !Array.isArray(items)) return 0;
     
+    // Sum up quantity of ALL variants of this product (e.g., Red 40 + Blue 41)
     return items
       .filter(item => item.productId === productId || item.id === productId)
       .reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -334,7 +333,7 @@ const ProductList = () => {
                       ) : (
                           <>
                               <Eye className="w-5 h-5 mr-2" />
-                              Select Size
+                              View Options
                           </>
                       )}
                     </button>
@@ -351,7 +350,6 @@ const ProductList = () => {
 };
 
 export default ProductList;
-
 // import { useEffect, useState, useMemo } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import axios from 'axios';

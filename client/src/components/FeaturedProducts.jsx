@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Star, ShoppingCart } from 'lucide-react';
-import axios from 'axios';
-import useCartStore from '../store/cartStore';
+import { Link, useNavigate } from 'react-router-dom';
+import { Star, ShoppingCart, ArrowRight } from 'lucide-react';
 import { syncProducts } from '../utils/offlineSync';
 
 const FeaturedProducts = () => {
   const [products, setProducts] = useState([]);
-  const { addItem } = useCartStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchFeatured();
@@ -16,9 +14,9 @@ const FeaturedProducts = () => {
   const fetchFeatured = async () => {
     try {
       const productsData = await syncProducts();
-      // Get top rated products
-      const featured = productsData
-        .filter(p => p.rating >= 4.5)
+      // OG FIX: Robust check to prevent crash if sync returns null
+      const featured = (productsData || [])
+        .filter(p => (p.rating || 0) >= 4.5)
         .slice(0, 4);
       setProducts(featured);
     } catch (error) {
@@ -43,40 +41,43 @@ const FeaturedProducts = () => {
           {products.map((product) => (
             <div
               key={product._id}
-              className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+              className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
+              onClick={() => navigate(`/product/${product._id}`)}
             >
-              <Link to={`/product/${product._id}`}>
-                <figure className="relative overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.title}
-                    className="w-full h-64 object-cover transition-transform duration-300 hover:scale-110"
-                  />
-                  {product.rating && (
-                    <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                      <span className="text-xs font-bold">{product.rating}</span>
-                    </div>
-                  )}
-                  <div className="absolute top-2 left-2">
-                    <div className="badge badge-secondary">Featured</div>
+              <figure className="relative overflow-hidden">
+                <img
+                  src={product.image}
+                  alt={product.title}
+                  className="w-full h-64 object-cover transition-transform duration-300 hover:scale-110"
+                />
+                {product.rating && (
+                  <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                    <span className="text-xs font-bold">{product.rating}</span>
                   </div>
-                </figure>
-              </Link>
+                )}
+                <div className="absolute top-2 left-2">
+                  <div className="badge badge-secondary">Featured</div>
+                </div>
+              </figure>
               <div className="card-body">
                 <Link to={`/product/${product._id}`}>
-                  <h3 className="card-title">{product.title}</h3>
+                  <h3 className="card-title line-clamp-1">{product.title}</h3>
                 </Link>
                 <p className="text-2xl font-bold text-secondary">
                   KES {product.price.toLocaleString()}
                 </p>
                 <div className="card-actions justify-end mt-4">
+                  {/* OG FIX: Redirect to Detail Page instead of instant add.
+                      This prevents adding items without a selected size/variant. */}
                   <button
                     className="btn btn-primary w-full"
-                    onClick={() => addItem(product)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/product/${product._id}`);
+                    }}
                   >
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Add to Cart
+                    View Options <ArrowRight className="w-4 h-4 ml-2" />
                   </button>
                 </div>
               </div>
@@ -94,5 +95,3 @@ const FeaturedProducts = () => {
 };
 
 export default FeaturedProducts;
-
-

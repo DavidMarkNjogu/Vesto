@@ -7,44 +7,47 @@ const useCartStore = create(
     (set, get) => ({
       items: [],
       
-      // ADD ITEM: Uses SKU to distinguish between "Red Size 40" and "Blue Size 40"
+      // ADD ITEM: Uses SKU to distinguish between variants
       addItem: async (product) => {
         const state = get();
+        // Fallback: If product has no SKU, use ID (prevent crash)
+        const itemKey = product.sku || product.id || product._id;
         
-        // LEARNING MOMENT: We check for SKU (Variant ID), not just Product ID
-        const existingItem = state.items.find((item) => item.sku === product.sku);
+        // Safety: Ensure items is an array
+        const currentItems = Array.isArray(state.items) ? state.items : [];
+
+        const existingItem = currentItems.find((item) => (item.sku || item.id) === itemKey);
         
         let newItems;
         if (existingItem) {
-          // If SKU matches, just increase quantity
-          newItems = state.items.map((item) =>
-            item.sku === existingItem.sku
+          newItems = currentItems.map((item) =>
+            (item.sku || item.id) === itemKey
               ? { ...item, quantity: item.quantity + (product.quantity || 1) }
               : item
           );
         } else {
-          // New SKU? Add it to the list
-          newItems = [...state.items, { 
+          newItems = [...currentItems, { 
             ...product, 
+            sku: itemKey, // Ensure SKU exists
             quantity: product.quantity || 1 
           }];
         }
         
         set({ items: newItems });
         
-        // Sync to offline DB (Best effort)
         try {
           for (const item of newItems) {
-            await offlineDB.saveCartItem(item); // Ensure offlineDB supports SKU as key if needed
+            await offlineDB.saveCartItem(item);
           }
         } catch (error) {
           console.error('Error saving to offline DB:', error);
         }
       },
 
-      // REMOVE ITEM: Must remove by SKU
+      // REMOVE ITEM
       removeItem: async (sku) => {
-        const newItems = get().items.filter((item) => item.sku !== sku);
+        const currentItems = get().items || [];
+        const newItems = currentItems.filter((item) => (item.sku || item.id) !== sku);
         set({ items: newItems });
         
         try {
@@ -54,12 +57,22 @@ const useCartStore = create(
         }
       },
 
-      // UPDATE QUANTITY: Must identify by SKU
+      // UPDATE QUANTITY
       updateQuantity: async (sku, quantity) => {
-        const newItems = get().items.map((item) =>
-          item.sku === sku ? { ...item, quantity: Math.max(1, quantity) } : item
+        const currentItems = get().items || [];
+        const newItems = currentItems.map((item) =>
+          (item.sku || item.id) === sku ? { ...item, quantity: Math.max(1, quantity) } : item
         );
         set({ items: newItems });
+        
+        try {
+          const item = newItems.find(i => (i.sku || i.id) === sku);
+          if (item) {
+            await offlineDB.saveCartItem(item);
+          }
+        } catch (error) {
+          console.error('Error updating in offline DB:', error);
+        }
       },
 
       clearCart: async () => {
@@ -73,15 +86,18 @@ const useCartStore = create(
 
       getTotal: () => {
         const state = get();
-        return state.items.reduce((total, item) => total + item.price * item.quantity, 0);
+        const currentItems = Array.isArray(state.items) ? state.items : [];
+        return currentItems.reduce((total, item) => total + item.price * item.quantity, 0);
       },
 
       syncFromOffline: async () => {
         try {
           const offlineItems = await offlineDB.getCartItems();
-          set({ items: offlineItems });
+          // OG FIX: NEVER allow null. Default to empty array []
+          set({ items: Array.isArray(offlineItems) ? offlineItems : [] });
         } catch (error) {
           console.error('Error syncing from offline DB:', error);
+          set({ items: [] }); // Safety fallback
         }
       },
     }),
@@ -92,7 +108,6 @@ const useCartStore = create(
 );
 
 export default useCartStore;
-
 // import { create } from 'zustand';
 // import { persist } from 'zustand/middleware';
 // import { offlineDB } from '../utils/offlineDB';

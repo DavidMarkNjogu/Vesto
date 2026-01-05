@@ -61,7 +61,9 @@ const FeaturedProducts = () => {
                 </div>
               </figure>
               <div className="card-body">
-                <h3 className="card-title line-clamp-1">{product.title}</h3>
+                <Link to={`/product/${product._id}`}>
+                  <h3 className="card-title line-clamp-1">{product.title}</h3>
+                </Link>
                 <p className="text-2xl font-bold text-secondary">
                   KES {product.price.toLocaleString()}
                 </p>

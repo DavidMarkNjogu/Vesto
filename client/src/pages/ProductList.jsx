@@ -28,7 +28,7 @@ const ProductList = () => {
   const fetchProducts = async () => {
     try {
       const productsData = await syncProducts();
-      setProducts(productsData || []); // Ensure array
+      setProducts(productsData || []); // Safety fallback
       setError(null);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -38,12 +38,12 @@ const ProductList = () => {
     }
   };
 
-  // OG FIX: CRASH PREVENTION
+  // OG FIX: Crash Prevention
   // We check if 'items' exists and is an array before trying to access it.
   const getProductCartCount = (productId) => {
     if (!items || !Array.isArray(items)) return 0;
     
-    // Sum up quantity of ALL variants of this product (e.g., Red 40 + Blue 41)
+    // Sum up quantity of ALL variants of this product
     return items
       .filter(item => item.productId === productId || item.id === productId)
       .reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -316,7 +316,6 @@ const ProductList = () => {
                   </p>
                   
                   {/* OG FIX: NAVIGATION BUTTON */}
-                  {/* Instead of "Add to Cart" which fails without size, we use "Select Size" */}
                   <div className="card-actions justify-end mt-4">
                     <button 
                       className="btn btn-primary w-full group-hover:btn-secondary transition-colors"

@@ -1,4 +1,3 @@
-// REMOVE "BrowserRouter as Router" from imports - It is handled in main.jsx
 import { Routes, Route, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import ProductList from './pages/ProductList';
@@ -12,26 +11,29 @@ import { setupOfflineListeners, isOnline } from './utils/offlineSync';
 
 function App() {
   const { items, syncFromOffline } = useCartStore();
-  
-  // OG FIX: Force 'items' to be an array, no matter what garbage comes in.
-  // If items is null, undefined, or an object, we default to [].
-  const safeItems = Array.isArray(items) ? items : [];
-  
-  // Safety: Ensure reduce only runs if safeItems is truly an array
-  const cartCount = safeItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-  
   const [online, setOnline] = useState(isOnline());
+  
+  // OG SAFETY LAYER: 
+  // 1. Ensure safeItems is ALWAYS an array
+  const safeItems = Array.isArray(items) ? items : []; 
+  
+  // 2. Calculate count carefully (handles if item is null)
+  const cartCount = safeItems.reduce((sum, item) => {
+    return sum + (item?.quantity || 1);
+  }, 0);
 
   useEffect(() => {
     // Initial sync
     syncFromOffline();
     
     // Listen for network changes
-    setupOfflineListeners(
+    const cleanup = setupOfflineListeners(
       () => setOnline(true),
       () => setOnline(false)
     );
-  }, []); // Added dependency array to run once
+    
+    return cleanup;
+  }, []); // Empty dependency array = run once on mount
 
   return (
     <div className="min-h-screen bg-bg">
@@ -42,6 +44,7 @@ function App() {
             <Link to="/" className="text-2xl font-bold hover:text-secondary transition-colors">
               👟 Vesto Shoes
             </Link>
+            
             <div className="flex gap-2 items-center">
               {!online && (
                 <div className="badge badge-warning gap-2 mr-2">
@@ -49,6 +52,7 @@ function App() {
                   Offline
                 </div>
               )}
+              
               <Link
                 to="/wishlist"
                 className="btn btn-ghost btn-sm hover:bg-white/20"
@@ -56,6 +60,7 @@ function App() {
               >
                 <Heart className="w-5 h-5" />
               </Link>
+              
               <Link
                 to="/dashboard"
                 className="btn btn-ghost btn-sm hover:bg-white/20"
@@ -63,6 +68,7 @@ function App() {
               >
                 <LayoutDashboard className="w-5 h-5" />
               </Link>
+              
               <Link
                 to="/checkout"
                 className="btn btn-secondary btn-sm hover:scale-105 transition-transform relative"

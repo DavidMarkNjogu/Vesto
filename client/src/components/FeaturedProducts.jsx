@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Star, ShoppingCart, ArrowRight } from 'lucide-react';
+import { Star, ArrowRight } from 'lucide-react';
 import { syncProducts } from '../utils/offlineSync';
 
 const FeaturedProducts = () => {
@@ -61,15 +61,12 @@ const FeaturedProducts = () => {
                 </div>
               </figure>
               <div className="card-body">
-                <Link to={`/product/${product._id}`}>
-                  <h3 className="card-title line-clamp-1">{product.title}</h3>
-                </Link>
+                <h3 className="card-title line-clamp-1">{product.title}</h3>
                 <p className="text-2xl font-bold text-secondary">
                   KES {product.price.toLocaleString()}
                 </p>
                 <div className="card-actions justify-end mt-4">
-                  {/* OG FIX: Redirect to Detail Page instead of instant add.
-                      This prevents adding items without a selected size/variant. */}
+                  {/* OG FIX: Redirect to Detail Page instead of instant add. */}
                   <button
                     className="btn btn-primary w-full"
                     onClick={(e) => {

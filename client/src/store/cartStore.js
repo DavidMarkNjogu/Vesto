@@ -7,15 +7,15 @@ const useCartStore = create(
     (set, get) => ({
       items: [],
       
-      // ADD ITEM: Uses SKU to distinguish between variants
+      // ADD ITEM: Robust logic
       addItem: async (product) => {
         const state = get();
-        // Fallback: If product has no SKU, use ID (prevent crash)
+        // Ensure items is an array before finding
+        const currentItems = Array.isArray(state.items) ? state.items : [];
+        
+        // Use SKU if available, otherwise fallback to ID
         const itemKey = product.sku || product.id || product._id;
         
-        // Safety: Ensure items is an array
-        const currentItems = Array.isArray(state.items) ? state.items : [];
-
         const existingItem = currentItems.find((item) => (item.sku || item.id) === itemKey);
         
         let newItems;
@@ -35,6 +35,7 @@ const useCartStore = create(
         
         set({ items: newItems });
         
+        // Sync to offline DB
         try {
           for (const item of newItems) {
             await offlineDB.saveCartItem(item);
@@ -93,21 +94,30 @@ const useCartStore = create(
       syncFromOffline: async () => {
         try {
           const offlineItems = await offlineDB.getCartItems();
-          // OG FIX: NEVER allow null. Default to empty array []
+          // FORCE ARRAY: Never allow null/undefined
           set({ items: Array.isArray(offlineItems) ? offlineItems : [] });
         } catch (error) {
           console.error('Error syncing from offline DB:', error);
-          set({ items: [] }); // Safety fallback
+          set({ items: [] });
         }
       },
     }),
     {
       name: 'vesto-cart',
+      // MAGIC FIX: This sanitizes "Poisoned" LocalStorage data
+      merge: (persistedState, currentState) => {
+        if (!persistedState || typeof persistedState !== 'object' || !Array.isArray(persistedState.items)) {
+          console.warn('⚠️ Corrupted/Old cart data found. Resetting cart.');
+          return currentState;
+        }
+        return { ...currentState, ...persistedState };
+      },
     }
   )
 );
 
 export default useCartStore;
+
 // import { create } from 'zustand';
 // import { persist } from 'zustand/middleware';
 // import { offlineDB } from '../utils/offlineDB';

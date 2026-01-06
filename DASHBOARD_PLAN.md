@@ -1,8 +1,8 @@
 # Dashboard Implementation Plan
 
 ## Phase 1: Foundation (Design System Integration)
-- [ ] **Configure Tailwind:** Update `tailwind.config.js` with the Vesto/Covera color palette (Primary `#358c9c`, Secondary `#f68716`).
-- [ ] **Create Component Directory:** Establish `client/src/components/admin` for organized file structure.
+- [x] **Configure Tailwind:** Update `tailwind.config.js` with the Vesto/Covera color palette (Primary `#358c9c`, Secondary `#f68716`).
+- [x] **Create Component Directory:** Establish `client/src/components/admin` for organized file structure.
 
 ## Phase 2: Core Components (The "Shell")
 - [ ] **Sidebar Component:** Create `AdminSidebar.jsx` with collapsible logic and Covera styling.

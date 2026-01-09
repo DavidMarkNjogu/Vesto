@@ -56,12 +56,16 @@ const initiateSTKPush = async (phone, amount, orderId) => {
   let formattedPhone = phone.replace('+', '');
   if (formattedPhone.startsWith('0')) formattedPhone = '254' + formattedPhone.slice(1);
 
+
+  // --- HARDCODED 1 KES FOR TESTING ---
+  const TEST_AMOUNT = 1;
+
   const payload = {
     BusinessShortCode: shortCode,
     Password: password,
     Timestamp: timestamp,
     TransactionType: 'CustomerPayBillOnline',
-    Amount: Math.floor(amount), // No decimals allowed
+    Amount: Math.floor(TEST_AMOUNT), // No decimals allowed
     PartyA: formattedPhone,
     PartyB: shortCode,
     PhoneNumber: formattedPhone,

@@ -8,7 +8,7 @@ export const ROUTES = {
     CART: '/cart',
     CHECKOUT: '/checkout',
     SUCCESS: '/checkout/success',
-    TRACKING: '/track-order',
+    TRACKING: '/track-order', // Ensures this path exists
     WISHLIST: '/wishlist',
   },
   

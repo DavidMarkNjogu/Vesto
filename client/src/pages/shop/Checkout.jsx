@@ -241,7 +241,7 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* Trust Badges (Visual Reassurance) */}
+            {/* Trust Badges (KenyaKicks Style) */}
             <div className="grid grid-cols-3 gap-4">
               <div className="flex flex-col items-center text-center p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
                 <ShieldCheck className="text-secondary w-8 h-8 mb-2" />

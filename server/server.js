@@ -2,35 +2,33 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { initiateSTKPush } = require('./utils/mpesa'); // Import the new utility
+
 dotenv.config();
 
 const app = express();
 
-// 1. INCREASE PAYLOAD LIMIT (Crucial for 5-angle images)
+// Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
-// --- MOCK DATA GENERATOR (Updated for Variants) ---
+// --- MOCK DATA (Keeping existing mock data for fallback) ---
 const generateVariants = (productId, basePrice) => {
   const sizes = ['39', '40', '41', '42', '43', '44'];
-  const colors = ['Black', 'White', 'Navy'];
   const variants = [];
-  
   sizes.forEach(size => {
-    // Generate a SKU for specific combinations
     variants.push({
       sku: `VES-${productId}-${size}-BLK`,
       size: size,
       color: 'Black',
-      stock: Math.floor(Math.random() * 8), // Random stock
+      stock: Math.floor(Math.random() * 8),
       priceOverride: basePrice
     });
   });
   return variants;
 };
 
-// Seed Data
 const MOCK_PRODUCTS = [
   { 
     _id: '1', 
@@ -38,11 +36,8 @@ const MOCK_PRODUCTS = [
     price: 4500,
     buyingPrice: 3000, 
     image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop',
-    images: [
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&h=600&fit=crop'
-    ],
-    description: 'Premium classic sneakers perfect for everyday wear',
+    images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop'],
+    description: 'Premium classic sneakers.',
     category: 'Sneakers',
     rating: 4.8,
     variants: generateVariants('1', 4500)
@@ -53,7 +48,7 @@ const MOCK_PRODUCTS = [
     price: 7800,
     buyingPrice: 5500,
     image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&h=600&fit=crop',
-    description: 'Durable leather boots for all weather conditions',
+    description: 'Durable leather boots.',
     category: 'Boots',
     rating: 4.9,
     variants: generateVariants('2', 7800)
@@ -63,7 +58,7 @@ const MOCK_PRODUCTS = [
 let dbConnected = false;
 let Product, Order;
 
-// --- MONGODB CONNECTION ---
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/covershoes', {
   serverSelectionTimeoutMS: 3000
 })
@@ -71,23 +66,17 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/covershoes'
   console.log('✅ MongoDB connected');
   dbConnected = true;
   
-  // Define Schemas Inline (Microservice style for MVP)
+  // SCHEMAS
   const productSchema = new mongoose.Schema({
     title: String,
     description: String,
     price: Number,
-    buyingPrice: Number, // New: Profit tracking
+    buyingPrice: Number,
     category: String,
     image: String,
-    images: [String], // New: 5-angle support
+    images: [String],
     rating: Number,
-    variants: [{
-        sku: String,
-        size: String,
-        color: String,
-        stock: Number,
-        priceOverride: Number
-    }]
+    variants: [{ sku: String, size: String, color: String, stock: Number, priceOverride: Number }]
   });
 
   const orderSchema = new mongoose.Schema({
@@ -96,12 +85,13 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/covershoes'
     phone: String,
     location: String,
     deliveryNotes: String,
-    cartItems: Array, // Stores snapshot of item details
+    cartItems: Array,
     subtotal: Number,
     shipping: Number,
     total: Number,
-    status: { type: String, default: 'Pending' },
+    status: { type: String, default: 'Pending' }, // Pending, Paid, Failed
     paymentMethod: String,
+    mpesaRequestId: String, // To track STK Push
     timestamp: { type: Date, default: Date.now }
   });
 
@@ -118,19 +108,13 @@ async function seedProducts() {
   if (!dbConnected) return;
   try {
     const count = await Product.countDocuments();
-    if (count === 0) {
-        console.log('Seeding products...');
-        await Product.insertMany(MOCK_PRODUCTS);
-        console.log('✅ Database seeded');
-    }
-  } catch (error) {
-    console.error('❌ Seeding failed:', error.message);
-  }
+    if (count === 0) await Product.insertMany(MOCK_PRODUCTS);
+  } catch (e) { console.error('Seeding failed', e); }
 }
 
-// --- API ROUTES ---
+// --- ROUTES ---
 
-// 1. GET PRODUCTS
+// Products
 app.get('/api/products', async (req, res) => {
   if (dbConnected && Product) {
     const products = await Product.find({});
@@ -142,34 +126,46 @@ app.get('/api/products', async (req, res) => {
 app.get('/api/products/:id', async (req, res) => {
   if (dbConnected && Product) {
     try {
-        const product = await Product.findById(req.params.id);
-        if(product) return res.json(product);
+      const product = await Product.findById(req.params.id);
+      if(product) return res.json(product);
     } catch(e) {}
   }
   const product = MOCK_PRODUCTS.find(p => p._id === req.params.id);
   return product ? res.json(product) : res.status(404).json({ error: 'Not Found' });
 });
 
-// 2. CREATE ORDER (Updated for Checkout.jsx)
+// CREATE ORDER + STK PUSH
 app.post('/api/orders', async (req, res) => {
   try {
     const orderData = req.body;
     
-    // Basic Validation
+    // Validation
     if (!orderData.phone || !orderData.cartItems || orderData.cartItems.length === 0) {
       return res.status(400).json({ error: 'Invalid Order Data' });
     }
 
     if (dbConnected && Order) {
+      // 1. Create Order in DB (Status: Pending)
       const order = new Order(orderData);
       await order.save();
-      
-      // TODO: Here we would trigger the MPESA STK Push
-      // await initiateSTKPush(orderData.phone, orderData.total);
+
+      // 2. Initiate M-PESA STK Push
+      try {
+        const mpesaResponse = await initiateSTKPush(order.phone, order.total, order._id.toString());
+        
+        // Save MerchantRequestID to link callback later
+        order.mpesaRequestId = mpesaResponse.MerchantRequestID;
+        await order.save();
+        
+        console.log(`📲 STK Push sent for Order ${order._id}`);
+      } catch (mpesaError) {
+        console.error('⚠️ M-PESA Failed, Order saved as Pending:', mpesaError.message);
+        // We still return success for the order, but frontend should warn user
+      }
       
       return res.json({ success: true, orderId: order._id });
     } else {
-      // Mock Mode
+      // Mock Mode (No DB)
       return res.json({ success: true, orderId: 'MOCK-' + Date.now() });
     }
   } catch (error) {
@@ -178,7 +174,38 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// 3. ADMIN: GET ORDERS
+// M-PESA CALLBACK (Webhook)
+app.post('/api/mpesa/callback', async (req, res) => {
+  try {
+    console.log('📩 M-PESA Callback Received:', JSON.stringify(req.body, null, 2));
+    
+    const { Body } = req.body;
+    if (!Body || !Body.stkCallback) return res.json({ result: 'ignored' });
+
+    const { MerchantRequestID, ResultCode } = Body.stkCallback;
+
+    if (dbConnected && Order) {
+      const order = await Order.findOne({ mpesaRequestId: MerchantRequestID });
+      if (order) {
+        if (ResultCode === 0) {
+          order.status = 'Paid';
+          console.log(`✅ Order ${order._id} marked as PAID`);
+        } else {
+          order.status = 'Failed';
+          console.log(`❌ Order ${order._id} payment FAILED`);
+        }
+        await order.save();
+      }
+    }
+    
+    res.json({ result: 'success' });
+  } catch (error) {
+    console.error('Callback Error:', error);
+    res.status(500).json({ error: 'Internal Error' });
+  }
+});
+
+// Admin Routes
 app.get('/api/admin/orders', async (req, res) => {
     if (dbConnected && Order) {
         const orders = await Order.find().sort({ timestamp: -1 });
@@ -187,45 +214,28 @@ app.get('/api/admin/orders', async (req, res) => {
     return res.json([]);
 });
 
-// 4. ADMIN: SAVE PRODUCT (Updated for Variants & Angles)
 app.post('/api/admin/products', async (req, res) => {
-    try {
-        const productData = req.body;
-        if (dbConnected && Product) {
-            const product = new Product(productData);
-            await product.save();
-            return res.json({ success: true, product });
-        }
-        // Mock Update
-        MOCK_PRODUCTS.push({ _id: Date.now().toString(), ...productData });
+    if (dbConnected && Product) {
+        await new Product(req.body).save();
         return res.json({ success: true });
-    } catch (error) {
-        return res.status(500).json({ error: 'Save failed' });
     }
+    return res.json({ success: true }); // Mock
 });
 
 app.put('/api/admin/products/:id', async (req, res) => {
-    try {
-        if (dbConnected && Product) {
-            await Product.findByIdAndUpdate(req.params.id, req.body);
-            return res.json({ success: true });
-        }
+    if (dbConnected && Product) {
+        await Product.findByIdAndUpdate(req.params.id, req.body);
         return res.json({ success: true });
-    } catch (error) {
-        return res.status(500).json({ error: 'Update failed' });
     }
+    return res.json({ success: true });
 });
 
 app.delete('/api/admin/products/:id', async (req, res) => {
-    try {
-        if (dbConnected && Product) {
-            await Product.findByIdAndDelete(req.params.id);
-            return res.json({ success: true });
-        }
+    if (dbConnected && Product) {
+        await Product.findByIdAndDelete(req.params.id);
         return res.json({ success: true });
-    } catch (error) {
-        return res.status(500).json({ error: 'Delete failed' });
     }
+    return res.json({ success: true });
 });
 
 const PORT = 5000;

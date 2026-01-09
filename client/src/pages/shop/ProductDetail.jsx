@@ -40,7 +40,7 @@ const ProductDetail = () => {
         
         setProduct(data);
         
-        // 3. Auto-Select Defaults (Reduces user friction)
+        // 3. Auto-Select Defaults
         if (data) {
           if (data.variants?.length > 0) {
             const first = data.variants.find(v => v.stock > 0) || data.variants[0];
@@ -59,7 +59,7 @@ const ProductDetail = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // --- DERIVED STATE (Smart Logic) ---
+  // --- DERIVED STATE ---
   const images = useMemo(() => {
     if (!product) return [];
     if (product.images?.length > 0) return product.images;
@@ -87,21 +87,16 @@ const ProductDetail = () => {
     return product.variants.find(v => v.size === selectedSize && v.color === selectedColor);
   }, [product, selectedSize, selectedColor]);
 
-  // Determine Tooltip Message
   const getButtonTooltip = () => {
     if (!selectedSize) return "Please select a size first";
     if (currentVariant && currentVariant.stock === 0) return "Out of stock in this size";
-    return ""; // No tooltip if valid
+    return "";
   };
 
   // --- HANDLERS ---
   const handleAddToCart = () => {
-    if (!selectedSize) {
-      // Fallback alert if tooltip is missed
-      return;
-    }
+    if (!selectedSize) return;
     
-    // Construct Cart Item with SKU logic
     const item = {
       id: currentVariant ? currentVariant.sku : `${product._id}-${selectedSize}-${selectedColor}`,
       productId: product._id,
@@ -139,11 +134,10 @@ const ProductDetail = () => {
           
           {/* 2. Image Gallery */}
           <div className="space-y-4 bg-gray-50 md:bg-transparent">
-            {/* Main Image */}
             <div className="relative aspect-square md:aspect-[4/3] w-full overflow-hidden md:rounded-2xl">
               <img 
                 src={images[selectedImageIndex] || images[0]} 
-                className="w-full h-full object-cover object-center transition-opacity duration-300"
+                className="w-full h-full object-cover object-center"
                 alt={product.title}
               />
               <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold shadow-sm">
@@ -151,7 +145,6 @@ const ProductDetail = () => {
               </div>
             </div>
             
-            {/* Thumbnails */}
             <div className="flex gap-3 overflow-x-auto px-4 md:px-0 pb-4 md:pb-0 scrollbar-hide">
               {images.map((img, idx) => (
                 <button
@@ -165,7 +158,7 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* 3. Product Info & Actions */}
+          {/* 3. Product Info */}
           <div className="px-4 pt-6 md:pt-0 space-y-8">
             <div>
               <div className="flex justify-between items-start">
@@ -177,7 +170,7 @@ const ProductDetail = () => {
 
             {/* Selectors */}
             <div className="space-y-6">
-              {/* Color Selector */}
+              {/* Color */}
               <div>
                 <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">Select Color</span>
                 <div className="flex flex-wrap gap-3 mt-3">
@@ -197,7 +190,7 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Size Selector */}
+              {/* Size */}
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">Select Size</span>
@@ -225,7 +218,6 @@ const ProductDetail = () => {
                       {variant.size}
                     </button>
                   )) : (
-                    // Fallback for non-variant products
                     availableSizes.map(size => (
                       <button key={size} onClick={() => setSelectedSize(size)} className={`py-3 rounded-lg border ${selectedSize === size ? 'bg-gray-900 text-white' : 'border-gray-200'}`}>{size}</button>
                     ))
@@ -242,11 +234,7 @@ const ProductDetail = () => {
                 <button onClick={() => setQuantity(quantity + 1)} className="px-4 text-gray-500 hover:text-gray-900"><Plus size={18} /></button>
               </div>
               
-              {/* TOOLTIP WRAPPER FOR DESKTOP */}
-              <div 
-                className={`flex-1 ${!selectedSize ? 'tooltip tooltip-open tooltip-primary' : ''}`} 
-                data-tip={getButtonTooltip()}
-              >
+              <div className={`flex-1 ${!selectedSize ? 'tooltip tooltip-open tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
                 <button 
                   onClick={handleAddToCart}
                   disabled={!selectedSize || (currentVariant && currentVariant.stock === 0)}
@@ -261,7 +249,7 @@ const ProductDetail = () => {
       </div>
 
       {/* 5. Mobile Sticky Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 z-20 pb-safe">
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 p-4 z-20 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="flex gap-3">
           <div className="flex items-center border border-gray-200 rounded-lg h-12 w-28 justify-between px-2">
             <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1"><Minus size={16} /></button>
@@ -269,11 +257,7 @@ const ProductDetail = () => {
             <button onClick={() => setQuantity(quantity + 1)} className="p-1"><Plus size={16} /></button>
           </div>
           
-          {/* TOOLTIP WRAPPER FOR MOBILE */}
-          <div 
-            className={`flex-1 ${!selectedSize ? 'tooltip tooltip-top tooltip-primary' : ''}`}
-            data-tip={getButtonTooltip()}
-          >
+          <div className={`flex-1 ${!selectedSize ? 'tooltip tooltip-top tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
             <button 
               onClick={handleAddToCart}
               disabled={!selectedSize}
@@ -285,57 +269,78 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* 6. Size Guide Modal (RESTORED) */}
+      {/* 6. REVAMPED SIZE GUIDE MODAL */}
       {showSizeGuide && (
-        <div className="modal modal-open backdrop-blur-sm bg-black/60 z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="modal-box max-w-2xl relative bg-white rounded-xl shadow-2xl p-0 overflow-hidden">
-            <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-bold text-lg flex items-center gap-2 text-gray-800">
+        <div className="modal modal-open backdrop-blur-sm bg-black/40 z-50 animate-in fade-in zoom-in-95 duration-200">
+          <div className="modal-box w-11/12 max-w-2xl max-h-[85vh] bg-white p-0 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Header - Fixed */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-white z-10">
+              <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900">
                 <Ruler className="text-primary" size={20} /> Size Guide
               </h3>
-              <button onClick={() => setShowSizeGuide(false)} className="btn btn-sm btn-circle btn-ghost">
+              <button 
+                onClick={() => setShowSizeGuide(false)} 
+                className="btn btn-sm btn-circle btn-ghost hover:bg-gray-100"
+              >
                 <X size={20} />
               </button>
             </div>
             
-            <div className="p-6 overflow-x-auto">
-              <table className="table table-zebra w-full text-center">
-                <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
-                  <tr>
-                    <th>EU Size</th>
-                    <th>UK Size</th>
-                    <th>US Men</th>
-                    <th>US Women</th>
-                    <th>CM Length</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { eu: '36', uk: '3.5', usm: '4.5', usw: '6', cm: '23.0' },
-                    { eu: '37', uk: '4.0', usm: '5.0', usw: '6.5', cm: '23.5' },
-                    { eu: '38', uk: '5.0', usm: '6.0', usw: '7.5', cm: '24.0' },
-                    { eu: '39', uk: '6.0', usm: '7.0', usw: '8.5', cm: '24.5' },
-                    { eu: '40', uk: '6.5', usm: '7.5', usw: '9.0', cm: '25.0' },
-                    { eu: '41', uk: '7.5', usm: '8.5', usw: '10.0', cm: '26.0' },
-                    { eu: '42', uk: '8.0', usm: '9.0', usw: '10.5', cm: '26.5' },
-                    { eu: '43', uk: '9.0', usm: '10.0', usw: '11.5', cm: '27.5' },
-                    { eu: '44', uk: '9.5', usm: '10.5', usw: '12.0', cm: '28.0' },
-                    { eu: '45', uk: '10.5', usm: '11.5', usw: '13.0', cm: '29.0' },
-                  ].map((row) => (
-                    <tr key={row.eu} className={selectedSize === row.eu ? "bg-primary/10 font-bold border-l-4 border-primary" : ""}>
-                      <td>{row.eu}</td>
-                      <td>{row.uk}</td>
-                      <td>{row.usm}</td>
-                      <td>{row.usw}</td>
-                      <td>{row.cm}</td>
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 bg-white">
+              <p className="text-sm text-gray-500 mb-4">
+                Use this chart to find your perfect fit. We use standard EU sizing for all our shoes.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="table w-full text-center border-separate border-spacing-y-1">
+                  <thead className="text-gray-500 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="pb-2 border-b border-gray-100">EU</th>
+                      <th className="pb-2 border-b border-gray-100">UK</th>
+                      <th className="pb-2 border-b border-gray-100">US Men</th>
+                      <th className="pb-2 border-b border-gray-100">US Women</th>
+                      <th className="pb-2 border-b border-gray-100">CM</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="text-sm">
+                    {[
+                      { eu: '36', uk: '3.5', usm: '4.5', usw: '6', cm: '23.0' },
+                      { eu: '37', uk: '4.0', usm: '5.0', usw: '6.5', cm: '23.5' },
+                      { eu: '38', uk: '5.0', usm: '6.0', usw: '7.5', cm: '24.0' },
+                      { eu: '39', uk: '6.0', usm: '7.0', usw: '8.5', cm: '24.5' },
+                      { eu: '40', uk: '6.5', usm: '7.5', usw: '9.0', cm: '25.0' },
+                      { eu: '41', uk: '7.5', usm: '8.5', usw: '10.0', cm: '26.0' },
+                      { eu: '42', uk: '8.0', usm: '9.0', usw: '10.5', cm: '26.5' },
+                      { eu: '43', uk: '9.0', usm: '10.0', usw: '11.5', cm: '27.5' },
+                      { eu: '44', uk: '9.5', usm: '10.5', usw: '12.0', cm: '28.0' },
+                      { eu: '45', uk: '10.5', usm: '11.5', usw: '13.0', cm: '29.0' },
+                    ].map((row) => (
+                      <tr 
+                        key={row.eu} 
+                        className={`hover:bg-gray-50 transition-colors ${
+                          selectedSize === row.eu 
+                            ? "bg-primary/5 font-bold text-primary" 
+                            : "text-gray-600"
+                        }`}
+                      >
+                        <td className="py-3 rounded-l-lg">{row.eu}</td>
+                        <td className="py-3">{row.uk}</td>
+                        <td className="py-3">{row.usm}</td>
+                        <td className="py-3">{row.usw}</td>
+                        <td className="py-3 rounded-r-lg">{row.cm}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
             
-            <div className="p-4 border-t border-gray-100 flex justify-end bg-gray-50">
-              <button className="btn btn-primary btn-sm text-white px-6" onClick={() => setShowSizeGuide(false)}>
+            {/* Footer - Fixed */}
+            <div className="p-4 border-t border-gray-100 bg-white flex justify-end z-10">
+              <button 
+                className="btn btn-primary btn-sm text-white px-8 rounded-lg shadow-lg hover:shadow-xl transition-all" 
+                onClick={() => setShowSizeGuide(false)}
+              >
                 Got it
               </button>
             </div>
@@ -345,11 +350,11 @@ const ProductDetail = () => {
 
       {/* 7. Success Toast */}
       {showSuccessToast && (
-        <div className="fixed top-20 right-4 md:right-8 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 z-50 animate-slide-in">
-          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-black"><Check size={18} strokeWidth={3} /></div>
+        <div className="fixed top-24 right-4 md:right-8 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce-in">
+          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-black"><Check size={14} strokeWidth={3} /></div>
           <div>
-            <p className="font-bold">Added to Cart</p>
-            <p className="text-xs text-gray-300">{product.title} - Size {selectedSize}</p>
+            <p className="font-bold text-sm">Added to Cart</p>
+            <p className="text-[10px] text-gray-300 uppercase tracking-wide">{selectedSize} / {selectedColor}</p>
           </div>
         </div>
       )}

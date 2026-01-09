@@ -11,13 +11,14 @@ import { ROUTES } from './routes';
 import ShopLayout from './layouts/ShopLayout';
 import AdminLayout from './layouts/AdminLayout';
 
-// PAGES - SHOP (NOW POINTING TO NEW STRUCTURE)
+// PAGES - SHOP
 import Home from './pages/shop/Home';
-import ProductList from './pages/shop/ProductList'; // The new one
-import ProductDetail from './pages/shop/ProductDetail'; // The new one
+import ProductList from './pages/shop/ProductList';
+import ProductDetail from './pages/shop/ProductDetail';
 import Cart from './pages/shop/Cart';
-import Checkout from './pages/Checkout'; // Still legacy for now
-import Wishlist from './pages/Wishlist'; // Still legacy for now
+import Checkout from './pages/shop/Checkout'; // NEW: Points to the new shop domain file
+import Wishlist from './pages/Wishlist'; // Legacy: Can stay for now
+import OrderSuccess from './pages/shop/OrderSuccess'; // NEW: The success page we built
 
 // PAGES - ADMIN
 import Dashboard from './pages/Dashboard';
@@ -50,6 +51,7 @@ function App() {
           <Route path={ROUTES.SHOP.PRODUCT_DETAIL} element={<ProductDetail />} />
           <Route path={ROUTES.SHOP.CART} element={<Cart />} />
           <Route path={ROUTES.SHOP.CHECKOUT} element={<Checkout />} />
+          <Route path={ROUTES.SHOP.SUCCESS} element={<OrderSuccess />} /> {/* New Success Route */}
           <Route path={ROUTES.SHOP.WISHLIST} element={<Wishlist />} />
         </Route>
 

@@ -11,13 +11,13 @@ import { ROUTES } from './routes';
 import ShopLayout from './layouts/ShopLayout';
 import AdminLayout from './layouts/AdminLayout';
 
-// PAGES - SHOP
+// PAGES - SHOP (NOW POINTING TO NEW STRUCTURE)
 import Home from './pages/shop/Home';
-import ProductList from './pages/ProductList'; // Legacy: Keep until refactor
-import ProductDetail from './pages/ProductDetail'; // Legacy: Keep until refactor
-import Cart from './pages/shop/Cart'; // NEW
-import Checkout from './pages/Checkout'; // Legacy: Keep until refactor
-import Wishlist from './pages/Wishlist'; // Legacy: Keep until refactor
+import ProductList from './pages/shop/ProductList'; // The new one
+import ProductDetail from './pages/shop/ProductDetail'; // The new one
+import Cart from './pages/shop/Cart';
+import Checkout from './pages/Checkout'; // Still legacy for now
+import Wishlist from './pages/Wishlist'; // Still legacy for now
 
 // PAGES - ADMIN
 import Dashboard from './pages/Dashboard';
@@ -26,15 +26,12 @@ function App() {
   const { syncFromOffline, items } = useCartStore();
   const [online, setOnline] = useState(isOnline());
 
-  const safeItems = Array.isArray(items) ? items : []; 
-
   useEffect(() => {
     syncFromOffline();
-    const cleanup = setupOfflineListeners(
+    return setupOfflineListeners(
       () => setOnline(true),
       () => setOnline(false)
     );
-    return cleanup;
   }, []);
 
   return (
@@ -46,17 +43,12 @@ function App() {
       )}
 
       <Routes>
-        {/* --- PUBLIC SHOP ROUTES --- */}
+        {/* --- SHOP ROUTES --- */}
         <Route element={<ShopLayout />}>
-          {/* UPDATED: Points to real Home page */}
           <Route path={ROUTES.SHOP.HOME} element={<Home />} />
-          
           <Route path={ROUTES.SHOP.PRODUCT_LIST} element={<ProductList />} />
           <Route path={ROUTES.SHOP.PRODUCT_DETAIL} element={<ProductDetail />} />
-          
-          {/* UPDATED: Points to real Cart page */}
           <Route path={ROUTES.SHOP.CART} element={<Cart />} />
-          
           <Route path={ROUTES.SHOP.CHECKOUT} element={<Checkout />} />
           <Route path={ROUTES.SHOP.WISHLIST} element={<Wishlist />} />
         </Route>

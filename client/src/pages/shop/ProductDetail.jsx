@@ -40,7 +40,7 @@ const ProductDetail = () => {
         
         setProduct(data);
         
-        // 3. Auto-Select Defaults
+        // 3. Auto-Select Defaults (Reduces user friction)
         if (data) {
           if (data.variants?.length > 0) {
             const first = data.variants.find(v => v.stock > 0) || data.variants[0];
@@ -59,7 +59,7 @@ const ProductDetail = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // --- DERIVED STATE ---
+  // --- DERIVED STATE (Smart Logic) ---
   const images = useMemo(() => {
     if (!product) return [];
     if (product.images?.length > 0) return product.images;
@@ -87,16 +87,21 @@ const ProductDetail = () => {
     return product.variants.find(v => v.size === selectedSize && v.color === selectedColor);
   }, [product, selectedSize, selectedColor]);
 
+  // Determine Tooltip Message
   const getButtonTooltip = () => {
     if (!selectedSize) return "Please select a size first";
     if (currentVariant && currentVariant.stock === 0) return "Out of stock in this size";
-    return "";
+    return ""; // No tooltip if valid
   };
 
   // --- HANDLERS ---
   const handleAddToCart = () => {
-    if (!selectedSize) return;
+    if (!selectedSize) {
+      // Fallback alert if tooltip is missed
+      return;
+    }
     
+    // Construct Cart Item with SKU logic
     const item = {
       id: currentVariant ? currentVariant.sku : `${product._id}-${selectedSize}-${selectedColor}`,
       productId: product._id,
@@ -134,10 +139,11 @@ const ProductDetail = () => {
           
           {/* 2. Image Gallery */}
           <div className="space-y-4 bg-gray-50 md:bg-transparent">
+            {/* Main Image */}
             <div className="relative aspect-square md:aspect-[4/3] w-full overflow-hidden md:rounded-2xl">
               <img 
                 src={images[selectedImageIndex] || images[0]} 
-                className="w-full h-full object-cover object-center"
+                className="w-full h-full object-cover object-center transition-opacity duration-300"
                 alt={product.title}
               />
               <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold shadow-sm">
@@ -145,6 +151,7 @@ const ProductDetail = () => {
               </div>
             </div>
             
+            {/* Thumbnails */}
             <div className="flex gap-3 overflow-x-auto px-4 md:px-0 pb-4 md:pb-0 scrollbar-hide">
               {images.map((img, idx) => (
                 <button
@@ -158,7 +165,7 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* 3. Product Info */}
+          {/* 3. Product Info & Actions */}
           <div className="px-4 pt-6 md:pt-0 space-y-8">
             <div>
               <div className="flex justify-between items-start">
@@ -170,7 +177,7 @@ const ProductDetail = () => {
 
             {/* Selectors */}
             <div className="space-y-6">
-              {/* Color */}
+              {/* Color Selector */}
               <div>
                 <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">Select Color</span>
                 <div className="flex flex-wrap gap-3 mt-3">
@@ -190,7 +197,7 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Size */}
+              {/* Size Selector */}
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">Select Size</span>
@@ -218,6 +225,7 @@ const ProductDetail = () => {
                       {variant.size}
                     </button>
                   )) : (
+                    // Fallback for non-variant products
                     availableSizes.map(size => (
                       <button key={size} onClick={() => setSelectedSize(size)} className={`py-3 rounded-lg border ${selectedSize === size ? 'bg-gray-900 text-white' : 'border-gray-200'}`}>{size}</button>
                     ))
@@ -234,7 +242,11 @@ const ProductDetail = () => {
                 <button onClick={() => setQuantity(quantity + 1)} className="px-4 text-gray-500 hover:text-gray-900"><Plus size={18} /></button>
               </div>
               
-              <div className={`flex-1 ${!selectedSize ? 'tooltip tooltip-open tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
+              {/* TOOLTIP WRAPPER FOR DESKTOP */}
+              <div 
+                className={`flex-1 ${!selectedSize ? 'tooltip tooltip-open tooltip-primary' : ''}`} 
+                data-tip={getButtonTooltip()}
+              >
                 <button 
                   onClick={handleAddToCart}
                   disabled={!selectedSize || (currentVariant && currentVariant.stock === 0)}
@@ -257,7 +269,11 @@ const ProductDetail = () => {
             <button onClick={() => setQuantity(quantity + 1)} className="p-1"><Plus size={16} /></button>
           </div>
           
-          <div className={`flex-1 ${!selectedSize ? 'tooltip tooltip-top tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
+          {/* TOOLTIP WRAPPER FOR MOBILE */}
+          <div 
+            className={`flex-1 ${!selectedSize ? 'tooltip tooltip-top tooltip-primary' : ''}`}
+            data-tip={getButtonTooltip()}
+          >
             <button 
               onClick={handleAddToCart}
               disabled={!selectedSize}
@@ -271,7 +287,7 @@ const ProductDetail = () => {
 
       {/* 6. REVAMPED SIZE GUIDE MODAL */}
       {showSizeGuide && (
-        <div className="modal modal-open backdrop-blur-sm bg-black/40 z-50 animate-in fade-in zoom-in-95 duration-200">
+        <div className="modal modal-open backdrop-blur-sm bg-black/60 z-50 animate-in fade-in zoom-in-95 duration-200">
           <div className="modal-box w-11/12 max-w-2xl max-h-[85vh] bg-white p-0 rounded-xl shadow-2xl flex flex-col overflow-hidden">
             {/* Header - Fixed */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-white z-10">
@@ -350,11 +366,11 @@ const ProductDetail = () => {
 
       {/* 7. Success Toast */}
       {showSuccessToast && (
-        <div className="fixed top-24 right-4 md:right-8 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce-in">
-          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-black"><Check size={14} strokeWidth={3} /></div>
+        <div className="fixed top-20 right-4 md:right-8 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 z-50 animate-slide-in">
+          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-black"><Check size={18} strokeWidth={3} /></div>
           <div>
-            <p className="font-bold text-sm">Added to Cart</p>
-            <p className="text-[10px] text-gray-300 uppercase tracking-wide">{selectedSize} / {selectedColor}</p>
+            <p className="font-bold">Added to Cart</p>
+            <p className="text-xs text-gray-300">{product.title} - Size {selectedSize}</p>
           </div>
         </div>
       )}

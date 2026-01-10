@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import useCartStore from '../../store/cartStore';
-import { ArrowLeft, ShoppingCart, Heart, Star, Check, Ruler, Plus, Minus, Info, X } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Check, Ruler, Plus, Minus, X, Footprints } from 'lucide-react'; // Added Footprints icon
 import { offlineDB } from '../../utils/offlineDB';
 import { isOnline } from '../../utils/offlineSync';
 
@@ -15,14 +15,12 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Selection
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   
-  // UI State
-  const [showSizeGuide, setShowSizeGuide] = useState(false); // Make sure this defaults to false
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   // --- INIT ---
@@ -53,7 +51,7 @@ const ProductDetail = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // --- HELPERS ---
+  // --- DERIVED STATE ---
   const images = useMemo(() => {
     if (!product) return [];
     if (product.images?.length > 0) return product.images;
@@ -112,8 +110,7 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-white pb-24 md:pb-10 relative">
-      
-      {/* 1. Sticky Mobile Header */}
+      {/* 1. Mobile Header */}
       <div className="md:hidden sticky top-0 bg-white/90 backdrop-blur z-30 px-4 py-3 flex items-center justify-between border-b border-gray-100">
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600"><ArrowLeft /></button>
         <span className="font-bold text-gray-800 truncate">{product.title}</span>
@@ -168,13 +165,9 @@ const ProductDetail = () => {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold text-sm uppercase">Size</span>
-                  {/* SIZE GUIDE TRIGGER */}
                   <button 
-                    type="button" // Prevent form submission behavior
-                    onClick={() => {
-                        console.log("Opening Size Guide"); 
-                        setShowSizeGuide(true);
-                    }} 
+                    type="button" 
+                    onClick={() => setShowSizeGuide(true)} 
                     className="text-xs text-primary underline flex items-center gap-1 cursor-pointer"
                   >
                     <Ruler size={14} /> Size Guide
@@ -184,8 +177,7 @@ const ProductDetail = () => {
                   {availableSizes.map(size => (
                     <button 
                       key={size}
-                      onClick={() => setSelectedSize(size)} // Handle string or object
-                      disabled={false} // Simplification for now
+                      onClick={() => setSelectedSize(size)}
                       className={`py-2 border rounded-lg text-sm font-bold ${selectedSize === size ? 'bg-gray-900 text-white' : 'border-gray-200'}`}
                     >
                       {typeof size === 'object' ? size.size : size}
@@ -224,39 +216,56 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* 5. SIZE GUIDE MODAL (Forced Z-Index) */}
+      {/* 5. REVAMPED DESCRIPTIVE SIZE GUIDE */}
       {showSizeGuide && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+          <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 border-b bg-gray-50">
               <h3 className="font-bold text-lg flex items-center gap-2"><Ruler className="text-primary"/> Size Guide</h3>
               <button onClick={() => setShowSizeGuide(false)} className="btn btn-sm btn-circle btn-ghost"><X size={20}/></button>
             </div>
             
-            <div className="overflow-y-auto p-0">
-               <table className="table w-full text-center">
-                  <thead className="bg-gray-100 sticky top-0">
-                    <tr><th>EU</th><th>UK</th><th>US (M)</th><th>CM</th></tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      {eu:'39', uk:'6', us:'7', cm:'24.5'},
-                      {eu:'40', uk:'6.5', us:'7.5', cm:'25.0'},
-                      {eu:'41', uk:'7.5', us:'8.5', cm:'26.0'},
-                      {eu:'42', uk:'8', us:'9', cm:'26.5'},
-                      {eu:'43', uk:'9', us:'10', cm:'27.5'},
-                      {eu:'44', uk:'9.5', us:'10.5', cm:'28.0'},
-                    ].map(r => (
-                        <tr key={r.eu} className={selectedSize === r.eu ? 'bg-primary/10 font-bold' : ''}>
-                            <td>{r.eu}</td><td>{r.uk}</td><td>{r.us}</td><td>{r.cm}</td>
-                        </tr>
-                    ))}
-                  </tbody>
-               </table>
+            <div className="flex-1 overflow-y-auto">
+                {/* How to Measure Section */}
+                <div className="p-6 border-b border-gray-100 bg-blue-50/30">
+                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <Footprints size={18} className="text-primary"/> How to Measure
+                    </h4>
+                    <ol className="list-decimal list-inside text-sm text-gray-600 space-y-2 ml-1">
+                        <li>Place a piece of paper on the floor against a wall.</li>
+                        <li>Stand on the paper with your heel firmly against the wall.</li>
+                        <li>Mark the longest part of your foot (usually the big toe).</li>
+                        <li>Measure the distance from the edge of the paper to the mark in <strong>cm</strong>.</li>
+                    </ol>
+                </div>
+
+                {/* The Chart */}
+                <div className="p-0">
+                    <table className="table w-full text-center">
+                        <thead className="bg-gray-100 sticky top-0">
+                            <tr><th>EU</th><th>UK</th><th>US (M)</th><th>CM</th></tr>
+                        </thead>
+                        <tbody className="text-sm">
+                            {[
+                            {eu:'39', uk:'6', us:'7', cm:'24.5'},
+                            {eu:'40', uk:'6.5', us:'7.5', cm:'25.0'},
+                            {eu:'41', uk:'7.5', us:'8.5', cm:'26.0'},
+                            {eu:'42', uk:'8', us:'9', cm:'26.5'},
+                            {eu:'43', uk:'9', us:'10', cm:'27.5'},
+                            {eu:'44', uk:'9.5', us:'10.5', cm:'28.0'},
+                            {eu:'45', uk:'10.5', us:'11.5', cm:'29.0'},
+                            ].map(r => (
+                                <tr key={r.eu} className={selectedSize === r.eu ? 'bg-primary/10 font-bold border-l-4 border-primary' : 'hover:bg-gray-50'}>
+                                    <td className="py-3">{r.eu}</td><td>{r.uk}</td><td>{r.us}</td><td className="font-mono">{r.cm}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div className="p-4 border-t bg-gray-50">
-               <button className="btn btn-primary btn-block text-white" onClick={() => setShowSizeGuide(false)}>Close</button>
+            <div className="p-4 border-t bg-white">
+               <button className="btn btn-primary btn-block text-white" onClick={() => setShowSizeGuide(false)}>Close Guide</button>
             </div>
           </div>
         </div>

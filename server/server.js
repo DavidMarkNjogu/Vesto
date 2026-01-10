@@ -2,24 +2,24 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { initiateSTKPush } = require('./utils/mpesa'); // Import the new utility
+const { initiateSTKPush } = require('./utils/mpesa'); 
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
-// --- MOCK DATA (Keeping existing mock data for fallback) ---
-const generateVariants = (productId, basePrice) => {
+// --- MOCK DATA GENERATOR ---
+const generateVariants = (basePrice) => {
   const sizes = ['39', '40', '41', '42', '43', '44'];
   const variants = [];
   sizes.forEach(size => {
+    // Note: We removed the productId from SKU generation temporarily to avoid circular logic
     variants.push({
-      sku: `VES-${productId}-${size}-BLK`,
+      sku: `VES-GENERIC-${size}-BLK`, 
       size: size,
       color: 'Black',
       stock: Math.floor(Math.random() * 8),
@@ -29,9 +29,10 @@ const generateVariants = (productId, basePrice) => {
   return variants;
 };
 
+// --- FIX: REMOVED EXPLICIT IDs ---
 const MOCK_PRODUCTS = [
   { 
-    _id: '1', 
+    // _id removed: MongoDB will generate this
     title: 'Vesto Classic Sneakers', 
     price: 4500,
     buyingPrice: 3000, 
@@ -40,10 +41,10 @@ const MOCK_PRODUCTS = [
     description: 'Premium classic sneakers.',
     category: 'Sneakers',
     rating: 4.8,
-    variants: generateVariants('1', 4500)
+    variants: generateVariants(4500)
   },
   { 
-    _id: '2', 
+    // _id removed
     title: 'Vesto Leather Boots', 
     price: 7800,
     buyingPrice: 5500,
@@ -51,7 +52,7 @@ const MOCK_PRODUCTS = [
     description: 'Durable leather boots.',
     category: 'Boots',
     rating: 4.9,
-    variants: generateVariants('2', 7800)
+    variants: generateVariants(7800)
   }
 ];
 
@@ -89,9 +90,9 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/covershoes'
     subtotal: Number,
     shipping: Number,
     total: Number,
-    status: { type: String, default: 'Pending' }, // Pending, Paid, Failed
+    status: { type: String, default: 'Pending' }, 
     paymentMethod: String,
-    mpesaRequestId: String, // To track STK Push
+    mpesaRequestId: String,
     timestamp: { type: Date, default: Date.now }
   });
 
@@ -108,28 +109,38 @@ async function seedProducts() {
   if (!dbConnected) return;
   try {
     const count = await Product.countDocuments();
-    if (count === 0) await Product.insertMany(MOCK_PRODUCTS);
-  } catch (e) { console.error('Seeding failed', e); }
+    if (count === 0) {
+        console.log('🌱 Seeding products...');
+        await Product.insertMany(MOCK_PRODUCTS);
+        console.log('✅ Seeding complete');
+    }
+  } catch (error) {
+    console.error('❌ Seeding failed:', error.message);
+  }
 }
 
 // --- ROUTES ---
 
-// Products
 app.get('/api/products', async (req, res) => {
   if (dbConnected && Product) {
     const products = await Product.find({});
     return res.json(products);
   }
-  return res.json(MOCK_PRODUCTS);
+  return res.json(MOCK_PRODUCTS.map((p, i) => ({ ...p, _id: (i + 1).toString() })));
 });
 
 app.get('/api/products/:id', async (req, res) => {
   if (dbConnected && Product) {
     try {
+      // Validate ObjectID format before querying to prevent crashes
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+          return res.status(400).json({ error: 'Invalid ID format' });
+      }
       const product = await Product.findById(req.params.id);
       if(product) return res.json(product);
-    } catch(e) {}
+    } catch(e) { console.error(e); }
   }
+  // Fallback for Mock Mode
   const product = MOCK_PRODUCTS.find(p => p._id === req.params.id);
   return product ? res.json(product) : res.status(404).json({ error: 'Not Found' });
 });
@@ -139,33 +150,25 @@ app.post('/api/orders', async (req, res) => {
   try {
     const orderData = req.body;
     
-    // Validation
     if (!orderData.phone || !orderData.cartItems || orderData.cartItems.length === 0) {
       return res.status(400).json({ error: 'Invalid Order Data' });
     }
 
     if (dbConnected && Order) {
-      // 1. Create Order in DB (Status: Pending)
       const order = new Order(orderData);
       await order.save();
 
-      // 2. Initiate M-PESA STK Push
       try {
         const mpesaResponse = await initiateSTKPush(order.phone, order.total, order._id.toString());
-        
-        // Save MerchantRequestID to link callback later
         order.mpesaRequestId = mpesaResponse.MerchantRequestID;
         await order.save();
-        
         console.log(`📲 STK Push sent for Order ${order._id}`);
       } catch (mpesaError) {
         console.error('⚠️ M-PESA Failed, Order saved as Pending:', mpesaError.message);
-        // We still return success for the order, but frontend should warn user
       }
       
       return res.json({ success: true, orderId: order._id });
     } else {
-      // Mock Mode (No DB)
       return res.json({ success: true, orderId: 'MOCK-' + Date.now() });
     }
   } catch (error) {
@@ -174,11 +177,10 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// M-PESA CALLBACK (Webhook)
+// M-PESA CALLBACK
 app.post('/api/mpesa/callback', async (req, res) => {
   try {
     console.log('📩 M-PESA Callback Received:', JSON.stringify(req.body, null, 2));
-    
     const { Body } = req.body;
     if (!Body || !Body.stkCallback) return res.json({ result: 'ignored' });
 
@@ -197,7 +199,6 @@ app.post('/api/mpesa/callback', async (req, res) => {
         await order.save();
       }
     }
-    
     res.json({ result: 'success' });
   } catch (error) {
     console.error('Callback Error:', error);
@@ -219,7 +220,7 @@ app.post('/api/admin/products', async (req, res) => {
         await new Product(req.body).save();
         return res.json({ success: true });
     }
-    return res.json({ success: true }); // Mock
+    return res.json({ success: true }); 
 });
 
 app.put('/api/admin/products/:id', async (req, res) => {

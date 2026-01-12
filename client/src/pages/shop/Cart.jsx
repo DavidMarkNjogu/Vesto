@@ -10,18 +10,27 @@ const Cart = () => {
   // 1. Force array type
   const rawItems = Array.isArray(items) ? items : [];
   
-  // 2. Filter & Sanitize
-  const safeItems = rawItems.filter(item => item && typeof item === 'object').map(item => ({
-    ...item,
-    // Ensure vital fields exist to prevent render crashes
-    id: item.sku || item.id || Math.random().toString(), // Fallback ID
-    title: item.title || 'Unknown Product',
-    price: Number(item.price) || 0, // Force Number
-    quantity: Math.max(1, Number(item.quantity) || 1), // Min 1
-    image: item.image || 'https://via.placeholder.com/150?text=No+Image',
-    selectedSize: item.selectedSize || 'N/A',
-    selectedColor: item.selectedColor || 'N/A'
-  }));
+  // 2. Filter & Sanitize (CRITICAL FIX HERE)
+  const safeItems = rawItems.filter(item => item && typeof item === 'object').map(item => {
+    // Helper to safely extract string from potential object
+    const safeString = (val) => {
+        if (typeof val === 'object' && val !== null) return val.name || val.value || JSON.stringify(val);
+        return String(val || 'N/A');
+    };
+
+    return {
+        ...item,
+        // Ensure vital fields exist to prevent render crashes
+        id: item.sku || item.id || Math.random().toString(), 
+        title: item.title || 'Unknown Product',
+        price: Number(item.price) || 0, 
+        quantity: Math.max(1, Number(item.quantity) || 1), 
+        image: item.image || 'https://via.placeholder.com/150?text=No+Image',
+        // FIX: Force these to be strings
+        selectedSize: safeString(item.selectedSize),
+        selectedColor: safeString(item.selectedColor)
+    };
+  });
 
   // 3. Calculate Subtotal safely
   const subtotal = safeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -91,6 +100,7 @@ const Cart = () => {
                       </button>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
+                      {/* NOW SAFE: These are guaranteed strings */}
                       <span className="badge badge-sm badge-ghost text-xs font-medium">Size: {item.selectedSize}</span>
                       <span className="badge badge-sm badge-ghost text-xs font-medium">{item.selectedColor}</span>
                     </div>

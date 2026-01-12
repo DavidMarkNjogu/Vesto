@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import useCartStore from '../../store/cartStore';
-import { ArrowLeft, ShoppingCart, Check, Ruler, Plus, Minus, X, Footprints } from 'lucide-react'; // Added Footprints icon
+import { ArrowLeft, ShoppingCart, CheckCircle, Ruler, Plus, Minus, X, Footprints } from 'lucide-react';
 import { offlineDB } from '../../utils/offlineDB';
 import { isOnline } from '../../utils/offlineSync';
 
@@ -85,8 +85,16 @@ const ProductDetail = () => {
     return "";
   };
 
+  // --- HANDLER (FIXED) ---
   const handleAddToCart = () => {
     if (!selectedSize) return;
+    
+    // Safety check for size type
+    if (typeof selectedSize === 'object') {
+        console.error("Critical Error: Object detected in size selection");
+        return;
+    }
+
     const item = {
       id: currentVariant ? currentVariant.sku : `${product._id}-${selectedSize}-${selectedColor}`,
       productId: product._id,
@@ -94,7 +102,7 @@ const ProductDetail = () => {
       title: product.title,
       price: currentVariant?.priceOverride || product.price,
       image: images[selectedImageIndex] || images[0],
-      selectedSize,
+      selectedSize, // This is now guaranteed to be a string
       selectedColor,
       quantity
     };
@@ -165,24 +173,36 @@ const ProductDetail = () => {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold text-sm uppercase">Size</span>
-                  <button 
-                    type="button" 
-                    onClick={() => setShowSizeGuide(true)} 
-                    className="text-xs text-primary underline flex items-center gap-1 cursor-pointer"
-                  >
+                  <button type="button" onClick={() => setShowSizeGuide(true)} className="text-xs text-primary underline flex items-center gap-1 cursor-pointer">
                     <Ruler size={14} /> Size Guide
                   </button>
                 </div>
+                
+                {/* --- FIX: SIZE SELECTOR LOOP --- */}
                 <div className="grid grid-cols-5 gap-2">
-                  {availableSizes.map(size => (
-                    <button 
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`py-2 border rounded-lg text-sm font-bold ${selectedSize === size ? 'bg-gray-900 text-white' : 'border-gray-200'}`}
-                    >
-                      {typeof size === 'object' ? size.size : size}
-                    </button>
-                  ))}
+                  {availableSizes.map(size => {
+                    // Extract safe string value
+                    const sizeValue = typeof size === 'object' ? size.size : size;
+                    const stock = typeof size === 'object' ? size.stock : 99;
+                    const isDisabled = stock === 0;
+
+                    return (
+                        <button 
+                        key={sizeValue}
+                        onClick={() => setSelectedSize(sizeValue)} // Pass string only
+                        disabled={isDisabled}
+                        className={`py-2 border rounded-lg text-sm font-bold transition-colors ${
+                            selectedSize === sizeValue 
+                            ? 'bg-gray-900 text-white border-gray-900' 
+                            : isDisabled
+                                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                                : 'border-gray-200 hover:border-gray-400 text-gray-700'
+                        }`}
+                        >
+                        {sizeValue}
+                        </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -190,11 +210,7 @@ const ProductDetail = () => {
             {/* Desktop Add to Cart */}
             <div className="hidden md:flex gap-4 pt-4 border-t">
               <div className={`flex-1 ${!selectedSize ? 'tooltip tooltip-open tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
-                <button 
-                  onClick={handleAddToCart}
-                  disabled={!selectedSize}
-                  className="w-full btn btn-primary btn-lg text-white shadow-lg"
-                >
+                <button onClick={handleAddToCart} disabled={!selectedSize} className="w-full btn btn-primary btn-lg text-white shadow-lg">
                   Add to Cart
                 </button>
               </div>
@@ -206,17 +222,13 @@ const ProductDetail = () => {
       {/* 4. Mobile Sticky Footer */}
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t p-4 z-20 pb-safe">
         <div className={`w-full ${!selectedSize ? 'tooltip tooltip-top tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
-           <button 
-             onClick={handleAddToCart}
-             disabled={!selectedSize}
-             className="w-full btn btn-primary text-white shadow-lg"
-           >
+           <button onClick={handleAddToCart} disabled={!selectedSize} className="w-full btn btn-primary text-white shadow-lg">
              {selectedSize ? `Add - KES ${(price * quantity).toLocaleString()}` : 'Select Size'}
            </button>
         </div>
       </div>
 
-      {/* 5. REVAMPED DESCRIPTIVE SIZE GUIDE */}
+      {/* 5. SIZE GUIDE MODAL */}
       {showSizeGuide && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -226,11 +238,8 @@ const ProductDetail = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto">
-                {/* How to Measure Section */}
                 <div className="p-6 border-b border-gray-100 bg-blue-50/30">
-                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                        <Footprints size={18} className="text-primary"/> How to Measure
-                    </h4>
+                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Footprints size={18} className="text-primary"/> How to Measure</h4>
                     <ol className="list-decimal list-inside text-sm text-gray-600 space-y-2 ml-1">
                         <li>Place a piece of paper on the floor against a wall.</li>
                         <li>Stand on the paper with your heel firmly against the wall.</li>
@@ -238,8 +247,6 @@ const ProductDetail = () => {
                         <li>Measure the distance from the edge of the paper to the mark in <strong>cm</strong>.</li>
                     </ol>
                 </div>
-
-                {/* The Chart */}
                 <div className="p-0">
                     <table className="table w-full text-center">
                         <thead className="bg-gray-100 sticky top-0">
@@ -263,7 +270,6 @@ const ProductDetail = () => {
                     </table>
                 </div>
             </div>
-
             <div className="p-4 border-t bg-white">
                <button className="btn btn-primary btn-block text-white" onClick={() => setShowSizeGuide(false)}>Close Guide</button>
             </div>

@@ -1,122 +1,207 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { offlineDB } from '../utils/offlineDB';
 
 const useCartStore = create(
   persist(
     (set, get) => ({
       items: [],
-      
-      // ADD ITEM: Robust logic
-      addItem: async (product) => {
-        const state = get();
-        // Ensure items is an array before finding
-        const currentItems = Array.isArray(state.items) ? state.items : [];
-        
-        // Use SKU if available, otherwise fallback to ID
-        const itemKey = product.sku || product.id || product._id;
-        
-        const existingItem = currentItems.find((item) => (item.sku || item.id) === itemKey);
-        
-        let newItems;
-        if (existingItem) {
-          newItems = currentItems.map((item) =>
-            (item.sku || item.id) === itemKey
-              ? { ...item, quantity: item.quantity + (product.quantity || 1) }
-              : item
-          );
-        } else {
-          newItems = [...currentItems, { 
-            ...product, 
-            sku: itemKey, // Ensure SKU exists
-            quantity: product.quantity || 1 
-          }];
-        }
-        
-        set({ items: newItems });
-        
-        // Sync to offline DB
-        try {
-          for (const item of newItems) {
-            await offlineDB.saveCartItem(item);
+
+      // 1. ADD ITEM (With Sanitization)
+      addItem: (newItem) => {
+        set((state) => {
+          // Ensure we never save an object as a size/color
+          const safeSize = typeof newItem.selectedSize === 'object' ? newItem.selectedSize.size : newItem.selectedSize;
+          const safeColor = typeof newItem.selectedColor === 'object' ? newItem.selectedColor.name : newItem.selectedColor;
+
+          const existingItem = state.items.find((item) => item.id === newItem.id);
+          
+          if (existingItem) {
+            return {
+              items: state.items.map((item) =>
+                item.id === newItem.id
+                  ? { ...item, quantity: item.quantity + newItem.quantity }
+                  : item
+              ),
+            };
           }
-        } catch (error) {
-          console.error('Error saving to offline DB:', error);
-        }
+          
+          return { 
+            items: [...state.items, { 
+              ...newItem, 
+              selectedSize: String(safeSize || 'N/A'), 
+              selectedColor: String(safeColor || 'N/A') 
+            }] 
+          };
+        });
       },
 
-      // REMOVE ITEM
-      removeItem: async (sku) => {
-        const currentItems = get().items || [];
-        const newItems = currentItems.filter((item) => (item.sku || item.id) !== sku);
-        set({ items: newItems });
-        
-        try {
-          await offlineDB.removeCartItem(sku);
-        } catch (error) {
-          console.error('Error removing from offline DB:', error);
-        }
+      // 2. REMOVE ITEM
+      removeItem: (id) => {
+        set((state) => ({
+          items: state.items.filter((item) => item.id !== id),
+        }));
       },
 
-      // UPDATE QUANTITY
-      updateQuantity: async (sku, quantity) => {
-        const currentItems = get().items || [];
-        const newItems = currentItems.map((item) =>
-          (item.sku || item.id) === sku ? { ...item, quantity: Math.max(1, quantity) } : item
-        );
-        set({ items: newItems });
-        
-        try {
-          const item = newItems.find(i => (i.sku || i.id) === sku);
-          if (item) {
-            await offlineDB.saveCartItem(item);
-          }
-        } catch (error) {
-          console.error('Error updating in offline DB:', error);
-        }
+      // 3. UPDATE QUANTITY
+      updateQuantity: (id, quantity) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.id === id ? { ...item, quantity } : item
+          ),
+        }));
       },
 
-      clearCart: async () => {
-        set({ items: [] });
-        try {
-          await offlineDB.clearCart();
-        } catch (error) {
-          console.error('Error clearing offline DB:', error);
-        }
-      },
+      // 4. CLEAR CART
+      clearCart: () => set({ items: [] }),
 
+      // 5. GET TOTAL
       getTotal: () => {
-        const state = get();
-        const currentItems = Array.isArray(state.items) ? state.items : [];
-        return currentItems.reduce((total, item) => total + item.price * item.quantity, 0);
+        return get().items.reduce(
+          (total, item) => total + item.price * item.quantity,
+          0
+        );
       },
 
-      syncFromOffline: async () => {
-        try {
-          const offlineItems = await offlineDB.getCartItems();
-          // FORCE ARRAY: Never allow null/undefined
-          set({ items: Array.isArray(offlineItems) ? offlineItems : [] });
-        } catch (error) {
-          console.error('Error syncing from offline DB:', error);
-          set({ items: [] });
-        }
-      },
+      // 6. SYNC (The Fix for Cached Errors)
+      syncFromOffline: () => {
+        // This runs on app load. We use it to sanitize bad data.
+        set((state) => {
+          const cleanItems = state.items.map(item => ({
+            ...item,
+            // Force convert any objects back to strings to fix the crash
+            selectedSize: typeof item.selectedSize === 'object' ? 'Fixed' : item.selectedSize,
+            selectedColor: typeof item.selectedColor === 'object' ? 'Fixed' : item.selectedColor
+          }));
+          return { items: cleanItems };
+        });
+      }
     }),
     {
-      name: 'vesto-cart',
-      // MAGIC FIX: This sanitizes "Poisoned" LocalStorage data
-      merge: (persistedState, currentState) => {
-        if (!persistedState || typeof persistedState !== 'object' || !Array.isArray(persistedState.items)) {
-          console.warn('⚠️ Corrupted/Old cart data found. Resetting cart.');
-          return currentState;
-        }
-        return { ...currentState, ...persistedState };
-      },
+      name: 'vesto-cart-storage',
     }
   )
 );
 
 export default useCartStore;
+// import { create } from 'zustand';
+// import { persist } from 'zustand/middleware';
+// import { offlineDB } from '../utils/offlineDB';
+
+// const useCartStore = create(
+//   persist(
+//     (set, get) => ({
+//       items: [],
+      
+//       // ADD ITEM: Robust logic
+//       addItem: async (product) => {
+//         const state = get();
+//         // Ensure items is an array before finding
+//         const currentItems = Array.isArray(state.items) ? state.items : [];
+        
+//         // Use SKU if available, otherwise fallback to ID
+//         const itemKey = product.sku || product.id || product._id;
+        
+//         const existingItem = currentItems.find((item) => (item.sku || item.id) === itemKey);
+        
+//         let newItems;
+//         if (existingItem) {
+//           newItems = currentItems.map((item) =>
+//             (item.sku || item.id) === itemKey
+//               ? { ...item, quantity: item.quantity + (product.quantity || 1) }
+//               : item
+//           );
+//         } else {
+//           newItems = [...currentItems, { 
+//             ...product, 
+//             sku: itemKey, // Ensure SKU exists
+//             quantity: product.quantity || 1 
+//           }];
+//         }
+        
+//         set({ items: newItems });
+        
+//         // Sync to offline DB
+//         try {
+//           for (const item of newItems) {
+//             await offlineDB.saveCartItem(item);
+//           }
+//         } catch (error) {
+//           console.error('Error saving to offline DB:', error);
+//         }
+//       },
+
+//       // REMOVE ITEM
+//       removeItem: async (sku) => {
+//         const currentItems = get().items || [];
+//         const newItems = currentItems.filter((item) => (item.sku || item.id) !== sku);
+//         set({ items: newItems });
+        
+//         try {
+//           await offlineDB.removeCartItem(sku);
+//         } catch (error) {
+//           console.error('Error removing from offline DB:', error);
+//         }
+//       },
+
+//       // UPDATE QUANTITY
+//       updateQuantity: async (sku, quantity) => {
+//         const currentItems = get().items || [];
+//         const newItems = currentItems.map((item) =>
+//           (item.sku || item.id) === sku ? { ...item, quantity: Math.max(1, quantity) } : item
+//         );
+//         set({ items: newItems });
+        
+//         try {
+//           const item = newItems.find(i => (i.sku || i.id) === sku);
+//           if (item) {
+//             await offlineDB.saveCartItem(item);
+//           }
+//         } catch (error) {
+//           console.error('Error updating in offline DB:', error);
+//         }
+//       },
+
+//       clearCart: async () => {
+//         set({ items: [] });
+//         try {
+//           await offlineDB.clearCart();
+//         } catch (error) {
+//           console.error('Error clearing offline DB:', error);
+//         }
+//       },
+
+//       getTotal: () => {
+//         const state = get();
+//         const currentItems = Array.isArray(state.items) ? state.items : [];
+//         return currentItems.reduce((total, item) => total + item.price * item.quantity, 0);
+//       },
+
+//       syncFromOffline: async () => {
+//         try {
+//           const offlineItems = await offlineDB.getCartItems();
+//           // FORCE ARRAY: Never allow null/undefined
+//           set({ items: Array.isArray(offlineItems) ? offlineItems : [] });
+//         } catch (error) {
+//           console.error('Error syncing from offline DB:', error);
+//           set({ items: [] });
+//         }
+//       },
+//     }),
+//     {
+//       name: 'vesto-cart',
+//       // MAGIC FIX: This sanitizes "Poisoned" LocalStorage data
+//       merge: (persistedState, currentState) => {
+//         if (!persistedState || typeof persistedState !== 'object' || !Array.isArray(persistedState.items)) {
+//           console.warn('⚠️ Corrupted/Old cart data found. Resetting cart.');
+//           return currentState;
+//         }
+//         return { ...currentState, ...persistedState };
+//       },
+//     }
+//   )
+// );
+
+// export default useCartStore;
 
 // import { create } from 'zustand';
 // import { persist } from 'zustand/middleware';

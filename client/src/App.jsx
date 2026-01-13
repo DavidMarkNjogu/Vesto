@@ -7,7 +7,7 @@ import useCartStore from './store/cartStore';
 import { setupOfflineListeners, isOnline } from './utils/offlineSync';
 import { ROUTES } from './routes';
 
-// AUTH (NEW)
+// AUTH (New Integration)
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './pages/auth/Login';
 
@@ -54,10 +54,10 @@ function App() {
       )}
 
       <Routes>
-        {/* --- PUBLIC AUTH ROUTE --- */}
+        {/* --- PUBLIC AUTH --- */}
         <Route path="/login" element={<Login />} />
 
-        {/* --- PUBLIC SHOP ROUTES --- */}
+        {/* --- PUBLIC SHOP --- */}
         <Route element={<ShopLayout />}>
           <Route path={ROUTES.SHOP.HOME} element={<Home />} />
           <Route path={ROUTES.SHOP.PRODUCT_LIST} element={<ProductList />} />
@@ -70,6 +70,7 @@ function App() {
         </Route>
 
         {/* --- PROTECTED ADMIN ROUTES --- */}
+        {/* This wrapper forces the Login Redirect if not authenticated */}
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
             <Route index element={<Dashboard />} />

@@ -7,6 +7,10 @@ import useCartStore from './store/cartStore';
 import { setupOfflineListeners, isOnline } from './utils/offlineSync';
 import { ROUTES } from './routes';
 
+// AUTH (NEW)
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Login from './pages/auth/Login';
+
 // LAYOUTS
 import ShopLayout from './layouts/ShopLayout';
 import AdminLayout from './layouts/AdminLayout';
@@ -18,7 +22,7 @@ import ProductList from './pages/shop/ProductList';
 import ProductDetail from './pages/shop/ProductDetail';
 import Cart from './pages/shop/Cart';
 import Checkout from './pages/shop/Checkout';
-import Wishlist from './pages/Wishlist'; // Legacy
+import Wishlist from './pages/Wishlist';
 import OrderSuccess from './pages/shop/OrderSuccess';
 import OrderTracking from './pages/shop/OrderTracking';
 
@@ -30,7 +34,7 @@ import SupplierDashboard from './pages/supplier/SupplierDashboard';
 import MyShipments from './pages/supplier/MyShipments';
 
 function App() {
-  const { syncFromOffline, items } = useCartStore();
+  const { syncFromOffline } = useCartStore();
   const [online, setOnline] = useState(isOnline());
 
   useEffect(() => {
@@ -50,7 +54,10 @@ function App() {
       )}
 
       <Routes>
-        {/* --- SHOP ROUTES --- */}
+        {/* --- PUBLIC AUTH ROUTE --- */}
+        <Route path="/login" element={<Login />} />
+
+        {/* --- PUBLIC SHOP ROUTES --- */}
         <Route element={<ShopLayout />}>
           <Route path={ROUTES.SHOP.HOME} element={<Home />} />
           <Route path={ROUTES.SHOP.PRODUCT_LIST} element={<ProductList />} />
@@ -62,17 +69,21 @@ function App() {
           <Route path={ROUTES.SHOP.TRACKING} element={<OrderTracking />} />
         </Route>
 
-        {/* --- ADMIN ROUTES --- */}
-        <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="inventory" element={<Dashboard />} /> 
-          <Route path="orders" element={<Dashboard />} />
+        {/* --- PROTECTED ADMIN ROUTES --- */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="inventory" element={<Dashboard />} /> 
+            <Route path="orders" element={<Dashboard />} />
+          </Route>
         </Route>
 
-        {/* --- SUPPLIER ROUTES --- */}
-        <Route path={ROUTES.SUPPLIER.DASHBOARD} element={<SupplierLayout />}>
-          <Route index element={<SupplierDashboard />} />
-          <Route path="shipments" element={<MyShipments />} />
+        {/* --- PROTECTED SUPPLIER ROUTES --- */}
+        <Route element={<ProtectedRoute allowedRoles={['supplier']} />}>
+          <Route path={ROUTES.SUPPLIER.DASHBOARD} element={<SupplierLayout />}>
+            <Route index element={<SupplierDashboard />} />
+            <Route path="shipments" element={<MyShipments />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

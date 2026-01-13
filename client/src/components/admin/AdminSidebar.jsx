@@ -1,82 +1,112 @@
-import { LayoutDashboard, Package, ShoppingBag, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, ShoppingBag, Package, Users, 
+  Settings, LogOut, BarChart3, ChevronLeft, ChevronRight 
+} from 'lucide-react';
+import useAuthStore from '../../store/authStore';
 
-const AdminSidebar = ({ isCollapsed, setIsCollapsed, activeTab, setActiveTab }) => {
+const AdminSidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const logout = useAuthStore((state) => state.logout);
   
+  // Local state for UI collapse (Restored from Old Code)
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Expanded Menu Items (From New Code)
   const menuItems = [
-    { id: 'overview', title: 'Dashboard', icon: LayoutDashboard },
-    { id: 'products', title: 'Products', icon: Package },
-    { id: 'orders', title: 'Orders', icon: ShoppingBag },
+    { path: '/admin', title: 'Overview', icon: LayoutDashboard },
+    { path: '/admin/orders', title: 'Orders', icon: ShoppingBag },
+    { path: '/admin/inventory', title: 'Inventory', icon: Package },
+    { path: '/admin/customers', title: 'Customers', icon: Users },
+    { path: '/admin/finance', title: 'Finance', icon: BarChart3 },
+    { path: '/admin/settings', title: 'Settings', icon: Settings },
   ];
 
   return (
-    <div className={`bg-primary text-white transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'} h-screen fixed left-0 top-0 overflow-y-auto z-20 flex flex-col shadow-xl`}>
-      {/* Header */}
-      <div className="p-4 mb-6 bg-white/10 mx-3 mt-3 rounded-xl flex items-center justify-between backdrop-blur-sm">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-             <span className="text-primary font-bold text-xl">V</span>
-          </div>
-          {!isCollapsed && (
-            <div className="transition-opacity duration-300">
-                <h1 className="font-bold text-white leading-tight tracking-wide">VESTO</h1>
-                <p className="text-[10px] text-white/70 uppercase tracking-widest">Admin</p>
-            </div>
-          )}
+    <div 
+      className={`h-screen bg-teal-900 text-white flex flex-col fixed left-0 top-0 border-r border-teal-800 transition-all duration-300 shadow-xl z-20 ${
+        isCollapsed ? 'w-20' : 'w-64'
+      }`}
+    >
+      {/* --- HEADER --- */}
+      <div className="h-16 flex items-center justify-between px-4 border-b border-teal-800 bg-teal-900/50 backdrop-blur-sm">
+        <div className={`flex items-center gap-3 overflow-hidden transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+          <span className="text-xl font-bold tracking-tight whitespace-nowrap">
+            Vesto<span className="text-teal-400">Admin</span>
+          </span>
         </div>
+        
+        {/* Toggle Button (Restored) */}
         <button 
-            onClick={() => setIsCollapsed(!isCollapsed)} 
-            className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-lg transition-colors"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={`p-1.5 rounded-lg hover:bg-teal-800 text-teal-200 hover:text-white transition-colors ${isCollapsed ? 'mx-auto' : ''}`}
         >
-            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-2">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`w-full flex items-center px-4 py-3 rounded-xl transition-all duration-200 font-medium group relative ${
-              activeTab === item.id 
-                ? 'bg-secondary text-white shadow-md translate-x-1' 
-                : 'hover:bg-white/10 text-white/80 hover:text-white'
-            }`}
-          >
-            <item.icon className={`w-5 h-5 transition-transform duration-300 ${activeTab === item.id ? 'scale-110' : 'group-hover:scale-110'} ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
-            
-            {!isCollapsed && <span>{item.title}</span>}
-            
-            {/* Tooltip for Collapsed State */}
-            {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-                    {item.title}
+      {/* --- NAVIGATION --- */}
+      <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden scrollbar-hide">
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`group w-full flex items-center relative rounded-lg transition-all duration-200 ${
+                isCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3'
+              } ${
+                isActive 
+                  ? 'bg-teal-800 text-white shadow-lg shadow-teal-900/20' 
+                  : 'text-teal-100 hover:bg-teal-800/50 hover:text-white'
+              }`}
+            >
+              {/* Icon */}
+              <item.icon 
+                size={22} 
+                strokeWidth={isActive ? 2.5 : 2} 
+                className={`transition-transform duration-300 ${isActive && !isCollapsed ? 'scale-110' : ''}`}
+              />
+              
+              {/* Text Label (Hidden if Collapsed) */}
+              <span className={`font-medium whitespace-nowrap transition-all duration-300 ${
+                isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 block'
+              }`}>
+                {item.title}
+              </span>
+
+              {/* Tooltip for Collapsed Mode (Restored) */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-xl border border-gray-700">
+                  {item.title}
                 </div>
-            )}
-          </button>
-        ))}
+              )}
+            </button>
+          );
+        })}
       </nav>
-      
-      {/* Footer User Info */}
-      <div className="p-4 bg-black/20 mt-auto border-t border-white/5">
-        <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
-            <div className="w-10 h-10 rounded-full bg-secondary border-2 border-white/20 flex items-center justify-center text-xs font-bold shadow-sm">
-                AD
-            </div>
-            {!isCollapsed && (
-                <div className="overflow-hidden flex-1">
-                    <p className="text-sm font-bold truncate">Admin User</p>
-                    <button 
-                        onClick={() => navigate('/')} 
-                        className="text-xs text-white/60 hover:text-white flex items-center gap-1 transition-colors"
-                    >
-                        <LogOut size={10} /> Logout
-                    </button>
-                </div>
-            )}
-        </div>
+
+      {/* --- FOOTER / LOGOUT --- */}
+      <div className="p-3 border-t border-teal-800 bg-teal-900">
+        <button 
+          onClick={logout} // WIRED UP: Uses authStore action
+          className={`flex items-center w-full rounded-lg transition-colors group hover:bg-red-500/10 ${
+            isCollapsed ? 'justify-center py-3 px-2' : 'gap-3 px-4 py-3'
+          }`}
+        >
+          <LogOut 
+            size={20} 
+            className="text-teal-200 group-hover:text-red-400 transition-colors" 
+          />
+          
+          {!isCollapsed && (
+            <span className="font-medium text-teal-200 group-hover:text-red-300 transition-colors">
+              Logout
+            </span>
+          )}
+        </button>
       </div>
     </div>
   );

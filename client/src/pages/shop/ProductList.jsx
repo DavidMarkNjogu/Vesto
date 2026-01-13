@@ -16,9 +16,9 @@ const ProductList = () => {
   const [sortBy, setSortBy] = useState('default');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
-  // Safe Store Access
+  // Safe Store Access (THE FIX)
   const store = useCartStore();
-  // DEFENSIVE READ: Ensure items is an array
+  // Ensure items is always an array, even if store is corrupted
   const items = Array.isArray(store.items) ? store.items : [];
 
   useEffect(() => {
@@ -40,11 +40,18 @@ const ProductList = () => {
 
   // Robust Cart Count Logic
   const getProductCartCount = (productId) => {
-    if (!items.length) return 0;
+    if (!items || items.length === 0) return 0; // Guard clause
+    
     return items
-      .filter(item => item.productId === productId || item.id === productId)
+      .filter(item => {
+        // Handle both string IDs and MongoDB ObjectIds
+        const itemId = item.productId || item.id;
+        return String(itemId) === String(productId);
+      })
       .reduce((sum, item) => sum + (item.quantity || 0), 0);
   };
+
+  // ... (Rest of the component remains the same, just keeping the fix focused)
 
   // Derived Data
   const categories = useMemo(() => {
@@ -78,7 +85,6 @@ const ProductList = () => {
     return filtered;
   }, [products, searchTerm, selectedCategory, sortBy]);
 
-  // Helper for Stars
   const renderStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating || 0);
@@ -126,7 +132,6 @@ const ProductList = () => {
             </div>
           </div>
 
-          {/* Desktop Filters (Hidden on Mobile) */}
           <div className="hidden md:flex gap-4 mt-4 items-center overflow-x-auto pb-2 scrollbar-hide">
             <select 
               className="select select-bordered select-sm"
@@ -150,7 +155,6 @@ const ProductList = () => {
         </div>
       </div>
 
-      {/* Mobile Filters Drawer (Slide Down) */}
       {showMobileFilters && (
         <div className="md:hidden bg-white border-b border-gray-100 p-4 animate-slide-in">
           <div className="space-y-4">
@@ -190,7 +194,6 @@ const ProductList = () => {
         </div>
       )}
 
-      {/* Product Grid */}
       <div className="container mx-auto px-4 py-6">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-xl shadow-sm">
@@ -219,8 +222,6 @@ const ProductList = () => {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="lazy"
                     />
-                    
-                    {/* Floating Badges */}
                     <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                       {product.category && (
                         <span className="badge badge-sm bg-white/90 backdrop-blur text-xs font-medium">
@@ -255,7 +256,6 @@ const ProductList = () => {
                         </span>
                       </div>
                       
-                      {/* Action Button */}
                       <button 
                         className="btn btn-circle btn-sm btn-primary text-white shadow-lg hover:scale-105 transition-transform"
                         onClick={(e) => {

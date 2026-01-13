@@ -196,29 +196,36 @@ app.post('/api/mpesa/callback', async (req, res) => {
   }
 });
 
-// --- AUTH ROUTE (NEW INTEGRATION) ---
+// --- AUTH ROUTE ---
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
-  
-  // 1. ADMIN CREDENTIALS
   if (email === 'admin@vesto.com' && password === 'admin123') {
-    return res.json({ 
-      success: true, 
-      user: { id: 'ADM-001', name: 'Vesto Admin', role: 'admin' },
-      token: 'mock-jwt-token-admin-secret-123' 
-    });
+    return res.json({ success: true, user: { id: 'ADM-001', name: 'Vesto Admin', role: 'admin' }, token: 'mock-admin' });
   }
-  
-  // 2. SUPPLIER CREDENTIALS
   if (email === 'supplier@nike.com' && password === 'nike123') {
-    return res.json({ 
-      success: true, 
-      user: { id: 'SUP-882', name: 'Nike Distributor', role: 'supplier' },
-      token: 'mock-jwt-token-supplier-secret-456' 
-    });
+    return res.json({ success: true, user: { id: 'SUP-882', name: 'Nike Distributor', role: 'supplier' }, token: 'mock-supplier' });
   }
+  return res.status(401).json({ error: 'Invalid credentials' });
+});
 
-  return res.status(401).json({ error: 'Invalid email or password' });
+// --- SUPPLIER ROUTES (NEW) ---
+app.get('/api/supplier/orders', async (req, res) => {
+  // In real life, we would filter by supplier ID here.
+  // For MVP, we return all relevant active orders.
+  if (dbConnected && Order) {
+    try {
+      const orders = await Order.find({ 
+        // Just show Paid/Pending orders, not cancelled ones
+        status: { $in: ['Paid', 'Pending'] } 
+      }).sort({ timestamp: -1 });
+      return res.json(orders);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Fetch failed' });
+    }
+  }
+  // Mock data fallback if DB off
+  return res.json([]);
 });
 
 // --- ADMIN ROUTES ---

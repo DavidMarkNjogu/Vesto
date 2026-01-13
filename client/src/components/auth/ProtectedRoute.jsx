@@ -6,8 +6,18 @@ const ProtectedRoute = ({ allowedRoles }) => {
   const { isAuthenticated, user, loading } = useAuthStore();
   const location = useLocation();
 
-  // 0. Wait for Hydration (Prevents false redirects on refresh)
+  // --- DIAGNOSTIC LOGS ---
+  console.log("🛡️ ProtectedRoute Check:", {
+    path: location.pathname,
+    isAuthenticated,
+    userRole: user?.role,
+    allowedRoles,
+    loading
+  });
+
+  // 0. Wait for Hydration
   if (loading) {
+    console.log("⏳ ProtectedRoute: Loading state active...");
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loader className="w-8 h-8 animate-spin text-primary" />
@@ -17,12 +27,14 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   // 1. Authentication Check
   if (!isAuthenticated) {
+    console.warn("⛔ ProtectedRoute: Not authenticated. Redirecting to /login");
     // Redirect to login, but remember where they were trying to go
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // 2. Role Authorization Check
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    console.error(`🚫 ProtectedRoute: Role mismatch. User: ${user?.role}, Required: ${allowedRoles}`);
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
         <div className="text-center max-w-md">
@@ -43,6 +55,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
   }
 
   // 3. Access Granted
+  console.log("✅ ProtectedRoute: Access Granted");
   return <Outlet />;
 };
 

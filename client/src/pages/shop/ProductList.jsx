@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useCartStore from '../../store/cartStore';
-import { ShoppingCart, Search, Star, Filter, X, Eye, SlidersHorizontal } from 'lucide-react';
+import { ShoppingCart, Search, Star, SlidersHorizontal, Eye } from 'lucide-react';
 import { syncProducts } from '../../utils/offlineSync';
 
 const ProductList = () => {
@@ -17,7 +17,9 @@ const ProductList = () => {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   // Safe Store Access
-  const { items } = useCartStore();
+  const store = useCartStore();
+  // DEFENSIVE READ: Ensure items is an array
+  const items = Array.isArray(store.items) ? store.items : [];
 
   useEffect(() => {
     fetchProducts();
@@ -38,7 +40,7 @@ const ProductList = () => {
 
   // Robust Cart Count Logic
   const getProductCartCount = (productId) => {
-    if (!items || !Array.isArray(items)) return 0;
+    if (!items.length) return 0;
     return items
       .filter(item => item.productId === productId || item.id === productId)
       .reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -88,14 +90,14 @@ const ProductList = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <span className="loading loading-spinner loading-lg text-primary"></span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header & Search */}
       <div className="bg-white shadow-sm sticky top-16 z-30 px-4 py-4">
         <div className="container mx-auto">
@@ -253,7 +255,7 @@ const ProductList = () => {
                         </span>
                       </div>
                       
-                      {/* Action Button - Forces Detail View for Variants */}
+                      {/* Action Button */}
                       <button 
                         className="btn btn-circle btn-sm btn-primary text-white shadow-lg hover:scale-105 transition-transform"
                         onClick={(e) => {

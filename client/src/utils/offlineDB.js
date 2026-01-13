@@ -2,25 +2,39 @@ class OfflineDB {
   constructor() {
     this.db = null;
     this.dbName = 'vesto_offline_db';
-    this.version = 1;
-    this.initPromise = null; // Logic to handle the race condition
+    this.version = 2; // Incremented version to force upgrade for new stores
+    this.initPromise = null;
   }
 
-  // Initialize the database
+  // --- CORE INITIALIZATION (Robust Race Condition Fix) ---
   async init() {
-    if (this.initPromise) return this.initPromise; // Return existing promise if already initializing
+    if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
-        // Create stores if they don't exist
+        
+        // 1. Products Store
         if (!db.objectStoreNames.contains('products')) {
-          db.createObjectStore('products', { keyPath: '_id' });
+          const productStore = db.createObjectStore('products', { keyPath: '_id' });
+          productStore.createIndex('category', 'category', { unique: false });
         }
+        
+        // 2. Orders Store (For syncing later)
         if (!db.objectStoreNames.contains('orders')) {
           db.createObjectStore('orders', { keyPath: 'tempId' });
+        }
+
+        // 3. Cart Store (Persist cart locally)
+        if (!db.objectStoreNames.contains('cart')) {
+          db.createObjectStore('cart', { keyPath: 'id' });
+        }
+
+        // 4. Wishlist Store
+        if (!db.objectStoreNames.contains('wishlist')) {
+          db.createObjectStore('wishlist', { keyPath: 'id' });
         }
       };
 
@@ -39,7 +53,7 @@ class OfflineDB {
     return this.initPromise;
   }
 
-  // HELPER: Wait for DB before doing anything
+  // Helper: Ensures DB is ready before any operation
   async ensureDb() {
     if (!this.db) {
       await this.init();
@@ -47,11 +61,11 @@ class OfflineDB {
     return this.db;
   }
 
-  // --- CRUD OPERATIONS ---
+  // --- 1. PRODUCT OPERATIONS ---
 
   async saveProducts(products) {
     try {
-      const db = await this.ensureDb(); // Wait for connection
+      const db = await this.ensureDb();
       if (!db) return;
 
       return new Promise((resolve, reject) => {
@@ -67,7 +81,7 @@ class OfflineDB {
         transaction.oncomplete = () => resolve();
         transaction.onerror = (e) => {
             console.warn('DB Write Error', e);
-            resolve(); // Resolve anyway to prevent app crash
+            resolve();
         };
       });
     } catch (error) {
@@ -77,7 +91,7 @@ class OfflineDB {
 
   async getProducts() {
     try {
-      const db = await this.ensureDb(); // Wait for connection
+      const db = await this.ensureDb();
       if (!db) return [];
 
       return new Promise((resolve, reject) => {
@@ -86,17 +100,16 @@ class OfflineDB {
         const request = store.getAll();
 
         request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => resolve([]); // Fallback to empty array
+        request.onerror = () => resolve([]);
       });
     } catch (error) {
-      console.error('Get Products Failed:', error);
       return [];
     }
   }
 
   async getProduct(id) {
     try {
-      const db = await this.ensureDb(); // Wait for connection
+      const db = await this.ensureDb();
       if (!db) return null;
 
       return new Promise((resolve, reject) => {
@@ -112,6 +125,8 @@ class OfflineDB {
     }
   }
 
+  // --- 2. ORDER OPERATIONS ---
+
   async saveOrder(order) {
     try {
       const db = await this.ensureDb();
@@ -120,7 +135,8 @@ class OfflineDB {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(['orders'], 'readwrite');
         const store = transaction.objectStore('orders');
-        store.add({ ...order, tempId: Date.now().toString(), synced: false });
+        // Add timestamp and sync status
+        store.add({ ...order, tempId: Date.now().toString(), synced: false, timestamp: Date.now() });
 
         transaction.oncomplete = () => resolve();
         transaction.onerror = (e) => reject(e.target.error);
@@ -129,156 +145,56 @@ class OfflineDB {
       console.error('Save Order Failed:', error);
     }
   }
+
+  async getPendingOrders() {
+    try {
+        const db = await this.ensureDb();
+        if(!db) return [];
+        return new Promise((resolve) => {
+            const tx = db.transaction('orders', 'readonly');
+            const store = tx.objectStore('orders');
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve([]);
+        });
+    } catch (e) { return []; }
+  }
+
+  // --- 3. WISHLIST OPERATIONS ---
+
+  async addToWishlist(product) {
+    try {
+        const db = await this.ensureDb();
+        if(!db) return;
+        const tx = db.transaction('wishlist', 'readwrite');
+        const store = tx.objectStore('wishlist');
+        await store.put({ id: product._id, ...product });
+    } catch (e) { console.error(e); }
+  }
+
+  async getWishlist() {
+    try {
+        const db = await this.ensureDb();
+        if(!db) return [];
+        return new Promise((resolve) => {
+            const tx = db.transaction('wishlist', 'readonly');
+            const store = tx.objectStore('wishlist');
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve([]);
+        });
+    } catch (e) { return []; }
+  }
+
+  async removeFromWishlist(id) {
+    try {
+        const db = await this.ensureDb();
+        if(!db) return;
+        const tx = db.transaction('wishlist', 'readwrite');
+        const store = tx.objectStore('wishlist');
+        await store.delete(id);
+    } catch (e) { console.error(e); }
+  }
 }
 
 export const offlineDB = new OfflineDB();
-// // IndexedDB wrapper for offline storage
-// class OfflineDB {
-//   constructor() {
-//     this.dbName = 'VestoShoesDB';
-//     this.version = 1;
-//     this.db = null;
-//   }
-
-//   async init() {
-//     return new Promise((resolve, reject) => {
-//       const request = indexedDB.open(this.dbName, this.version);
-
-//       request.onerror = () => reject(request.error);
-//       request.onsuccess = () => {
-//         this.db = request.result;
-//         resolve(this.db);
-//       };
-
-//       request.onupgradeneeded = (event) => {
-//         const db = event.target.result;
-
-//         // Products store
-//         if (!db.objectStoreNames.contains('products')) {
-//           const productStore = db.createObjectStore('products', { keyPath: '_id' });
-//           productStore.createIndex('category', 'category', { unique: false });
-//         }
-
-//         // Cart store
-//         if (!db.objectStoreNames.contains('cart')) {
-//           db.createObjectStore('cart', { keyPath: 'id' });
-//         }
-
-//         // Pending orders store
-//         if (!db.objectStoreNames.contains('pendingOrders')) {
-//           db.createObjectStore('pendingOrders', { keyPath: 'id', autoIncrement: true });
-//         }
-
-//         // Wishlist store
-//         if (!db.objectStoreNames.contains('wishlist')) {
-//           db.createObjectStore('wishlist', { keyPath: 'id' });
-//         }
-//       };
-//     });
-//   }
-
-//   // Products
-//   async saveProducts(products) {
-//     const tx = this.db.transaction('products', 'readwrite');
-//     const store = tx.objectStore('products');
-    
-//     for (const product of products) {
-//       await store.put(product);
-//     }
-    
-//     return tx.complete;
-//   }
-
-//   async getProducts() {
-//     const tx = this.db.transaction('products', 'readonly');
-//     const store = tx.objectStore('products');
-//     return store.getAll();
-//   }
-
-//   async getProduct(id) {
-//     const tx = this.db.transaction('products', 'readonly');
-//     const store = tx.objectStore('products');
-//     return store.get(id);
-//   }
-
-//   // Cart
-//   async saveCartItem(item) {
-//     const tx = this.db.transaction('cart', 'readwrite');
-//     const store = tx.objectStore('cart');
-//     await store.put(item);
-//     return tx.complete;
-//   }
-
-//   async getCartItems() {
-//     const tx = this.db.transaction('cart', 'readonly');
-//     const store = tx.objectStore('cart');
-//     return store.getAll();
-//   }
-
-//   async removeCartItem(id) {
-//     const tx = this.db.transaction('cart', 'readwrite');
-//     const store = tx.objectStore('cart');
-//     await store.delete(id);
-//     return tx.complete;
-//   }
-
-//   async clearCart() {
-//     const tx = this.db.transaction('cart', 'readwrite');
-//     const store = tx.objectStore('cart');
-//     await store.clear();
-//     return tx.complete;
-//   }
-
-//   // Pending Orders
-//   async savePendingOrder(orderData) {
-//     const tx = this.db.transaction('pendingOrders', 'readwrite');
-//     const store = tx.objectStore('pendingOrders');
-//     const id = await store.add({ data: orderData, timestamp: Date.now() });
-//     return id;
-//   }
-
-//   async getPendingOrders() {
-//     const tx = this.db.transaction('pendingOrders', 'readonly');
-//     const store = tx.objectStore('pendingOrders');
-//     return store.getAll();
-//   }
-
-//   async removePendingOrder(id) {
-//     const tx = this.db.transaction('pendingOrders', 'readwrite');
-//     const store = tx.objectStore('pendingOrders');
-//     await store.delete(id);
-//     return tx.complete;
-//   }
-
-//   // Wishlist
-//   async addToWishlist(product) {
-//     const tx = this.db.transaction('wishlist', 'readwrite');
-//     const store = tx.objectStore('wishlist');
-//     await store.put({ id: product._id, ...product });
-//     return tx.complete;
-//   }
-
-//   async getWishlist() {
-//     const tx = this.db.transaction('wishlist', 'readonly');
-//     const store = tx.objectStore('wishlist');
-//     return store.getAll();
-//   }
-
-//   async removeFromWishlist(id) {
-//     const tx = this.db.transaction('wishlist', 'readwrite');
-//     const store = tx.objectStore('wishlist');
-//     await store.delete(id);
-//     return tx.complete;
-//   }
-
-//   async isInWishlist(id) {
-//     const tx = this.db.transaction('wishlist', 'readonly');
-//     const store = tx.objectStore('wishlist');
-//     const item = await store.get(id);
-//     return !!item;
-//   }
-// }
-
-// export const offlineDB = new OfflineDB();
-
-

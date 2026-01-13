@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const useAuthStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -12,13 +12,11 @@ const useAuthStore = create(
       error: null,
 
       login: async (email, password) => {
-        console.log("🔐 AuthStore: Attempting login for", email);
         set({ loading: true, error: null });
         try {
           const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
           
           if (res.data.success) {
-            console.log("✅ AuthStore: Login success", res.data.user);
             set({ 
               user: res.data.user, 
               token: res.data.token, 
@@ -28,7 +26,6 @@ const useAuthStore = create(
             return res.data.user.role;
           }
         } catch (err) {
-          console.error("❌ AuthStore: Login failed", err);
           set({ 
             error: err.response?.data?.error || 'Login failed. Please check credentials.', 
             loading: false 
@@ -38,16 +35,18 @@ const useAuthStore = create(
       },
 
       logout: () => {
-        console.log("👋 AuthStore: Logging out");
+        // 1. Reset State
         set({ user: null, token: null, isAuthenticated: false });
+        
+        // 2. Nuke Local Storage (The Fix)
+        localStorage.removeItem('vesto-auth-storage');
+        
+        // 3. Force Hard Redirect to clear memory
         window.location.href = '/login';
       }
     }),
     {
       name: 'vesto-auth-storage',
-      onRehydrateStorage: () => (state) => {
-        console.log('💾 AuthStore: Hydrated from LocalStorage', state);
-      }
     }
   )
 );

@@ -14,7 +14,6 @@ const useAuthStore = create(
       login: async (email, password) => {
         set({ loading: true, error: null });
         try {
-          // Connecting to the backend route we just created
           const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
           
           if (res.data.success) {
@@ -24,7 +23,7 @@ const useAuthStore = create(
               isAuthenticated: true, 
               loading: false 
             });
-            return res.data.user.role; // Returns 'admin' or 'supplier'
+            return res.data.user.role;
           }
         } catch (err) {
           set({ 
@@ -37,11 +36,11 @@ const useAuthStore = create(
 
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false });
-        // Optional: Clear any role-specific data if needed
+        window.location.href = '/login';
       }
     }),
     {
-      name: 'vesto-auth-storage', // Distinct key from cart storage
+      name: 'vesto-auth-storage',
     }
   )
 );

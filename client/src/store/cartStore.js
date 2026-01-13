@@ -9,15 +9,18 @@ const useCartStore = create(
       // 1. ADD ITEM (With Sanitization)
       addItem: (newItem) => {
         set((state) => {
+          // Ensure state.items is always an array
+          const currentItems = Array.isArray(state.items) ? state.items : [];
+          
           // Ensure we never save an object as a size/color
           const safeSize = typeof newItem.selectedSize === 'object' ? newItem.selectedSize.size : newItem.selectedSize;
           const safeColor = typeof newItem.selectedColor === 'object' ? newItem.selectedColor.name : newItem.selectedColor;
 
-          const existingItem = state.items.find((item) => item.id === newItem.id);
+          const existingItem = currentItems.find((item) => item.id === newItem.id);
           
           if (existingItem) {
             return {
-              items: state.items.map((item) =>
+              items: currentItems.map((item) =>
                 item.id === newItem.id
                   ? { ...item, quantity: item.quantity + newItem.quantity }
                   : item
@@ -26,7 +29,7 @@ const useCartStore = create(
           }
           
           return { 
-            items: [...state.items, { 
+            items: [...currentItems, { 
               ...newItem, 
               selectedSize: String(safeSize || 'N/A'), 
               selectedColor: String(safeColor || 'N/A') 
@@ -38,14 +41,14 @@ const useCartStore = create(
       // 2. REMOVE ITEM
       removeItem: (id) => {
         set((state) => ({
-          items: state.items.filter((item) => item.id !== id),
+          items: (Array.isArray(state.items) ? state.items : []).filter((item) => item.id !== id),
         }));
       },
 
       // 3. UPDATE QUANTITY
       updateQuantity: (id, quantity) => {
         set((state) => ({
-          items: state.items.map((item) =>
+          items: (Array.isArray(state.items) ? state.items : []).map((item) =>
             item.id === id ? { ...item, quantity } : item
           ),
         }));
@@ -56,19 +59,19 @@ const useCartStore = create(
 
       // 5. GET TOTAL
       getTotal: () => {
-        return get().items.reduce(
+        const currentItems = Array.isArray(get().items) ? get().items : [];
+        return currentItems.reduce(
           (total, item) => total + item.price * item.quantity,
           0
         );
       },
 
-      // 6. SYNC (The Fix for Cached Errors)
+      // 6. SYNC
       syncFromOffline: () => {
-        // This runs on app load. We use it to sanitize bad data.
         set((state) => {
-          const cleanItems = state.items.map(item => ({
+          const currentItems = Array.isArray(state.items) ? state.items : [];
+          const cleanItems = currentItems.map(item => ({
             ...item,
-            // Force convert any objects back to strings to fix the crash
             selectedSize: typeof item.selectedSize === 'object' ? 'Fixed' : item.selectedSize,
             selectedColor: typeof item.selectedColor === 'object' ? 'Fixed' : item.selectedColor
           }));
@@ -78,6 +81,20 @@ const useCartStore = create(
     }),
     {
       name: 'vesto-cart-storage',
+      // MAGIC FIX: Sanitize data on load
+      merge: (persistedState, currentState) => {
+        if (!persistedState || typeof persistedState !== 'object') {
+          return currentState;
+        }
+        
+        // If 'items' is corrupt (not an array), reset it to []
+        if (!Array.isArray(persistedState.items)) {
+          console.warn("⚠️ Corrupted cart state detected. Resetting cart to empty.");
+          return { ...currentState, items: [] };
+        }
+
+        return { ...currentState, ...persistedState };
+      }
     }
   )
 );

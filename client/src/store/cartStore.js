@@ -6,10 +6,9 @@ const useCartStore = create(
     (set, get) => ({
       items: [],
 
-      // 1. ADD ITEM (With Sanitization)
+      // 1. ADD ITEM (Robust)
       addItem: (newItem) => {
         set((state) => {
-          // Ensure state.items is always an array
           const currentItems = Array.isArray(state.items) ? state.items : [];
           
           // Ensure we never save an object as a size/color
@@ -70,6 +69,7 @@ const useCartStore = create(
       syncFromOffline: () => {
         set((state) => {
           const currentItems = Array.isArray(state.items) ? state.items : [];
+          // Auto-fix any string/object mismatches
           const cleanItems = currentItems.map(item => ({
             ...item,
             selectedSize: typeof item.selectedSize === 'object' ? 'Fixed' : item.selectedSize,
@@ -81,15 +81,15 @@ const useCartStore = create(
     }),
     {
       name: 'vesto-cart-storage',
-      // MAGIC FIX: Sanitize data on load
+      // MAGIC FIX: Sanitize corrupted localStorage on load
       merge: (persistedState, currentState) => {
         if (!persistedState || typeof persistedState !== 'object') {
           return currentState;
         }
         
-        // If 'items' is corrupt (not an array), reset it to []
+        // CRITICAL CHECK: If 'items' is not an array (e.g., object {}), reset it.
         if (!Array.isArray(persistedState.items)) {
-          console.warn("⚠️ Corrupted cart state detected. Resetting cart to empty.");
+          console.warn("⚠️ Corrupted cart state detected in LocalStorage. Resetting to empty.");
           return { ...currentState, items: [] };
         }
 

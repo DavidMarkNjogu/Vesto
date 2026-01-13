@@ -63,7 +63,6 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/covershoes'
   console.log('✅ MongoDB connected');
   dbConnected = true;
   
-  // SCHEMAS
   const productSchema = new mongoose.Schema({
     title: String,
     description: String,
@@ -197,11 +196,11 @@ app.post('/api/mpesa/callback', async (req, res) => {
   }
 });
 
-// --- AUTH ROUTE (NEW STEP 1) ---
+// --- AUTH ROUTE (NEW INTEGRATION) ---
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   
-  // 1. ADMIN CREDENTIALS (Hardcoded for MVP)
+  // 1. ADMIN CREDENTIALS
   if (email === 'admin@vesto.com' && password === 'admin123') {
     return res.json({ 
       success: true, 
@@ -210,7 +209,7 @@ app.post('/api/auth/login', (req, res) => {
     });
   }
   
-  // 2. SUPPLIER CREDENTIALS (Hardcoded for MVP)
+  // 2. SUPPLIER CREDENTIALS
   if (email === 'supplier@nike.com' && password === 'nike123') {
     return res.json({ 
       success: true, 

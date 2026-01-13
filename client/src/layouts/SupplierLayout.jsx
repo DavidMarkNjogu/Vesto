@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Truck, Package, LogOut, Menu, X } from 'lucide-react';
+import useAuthStore from '../store/authStore'; // Import Store
 
 const SupplierLayout = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const logout = useAuthStore((state) => state.logout); // Get Logout Function
 
   const menuItems = [
     { path: '/supplier', title: 'Dashboard', icon: Package },
@@ -45,7 +47,10 @@ const SupplierLayout = () => {
         </nav>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
-          <button className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors w-full px-4 py-2">
+          <button 
+            onClick={logout} // WIRED UP HERE
+            className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors w-full px-4 py-2 hover:bg-white/5 rounded-lg"
+          >
             <LogOut size={20} />
             <span>Logout</span>
           </button>

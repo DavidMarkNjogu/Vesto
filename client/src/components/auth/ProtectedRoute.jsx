@@ -1,9 +1,19 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import { Loader } from 'lucide-react';
 
 const ProtectedRoute = ({ allowedRoles }) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, loading } = useAuthStore();
   const location = useLocation();
+
+  // 0. Wait for Hydration (Prevents false redirects on refresh)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   // 1. Authentication Check
   if (!isAuthenticated) {

@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Filter, Box, MapPin, Phone, CheckCircle, Clock, Truck, AlertCircle } from 'lucide-react';
+import { Search, Filter, Box, MapPin, Phone, Clock, AlertCircle } from 'lucide-react';
+
+// NEW COMPONENTS
+import StatusBadge from '../../components/common/StatusBadge';
+import { ActionGroup, VerifyBtn } from '../../components/common/ActionButtons';
 
 const MyShipments = () => {
   const [orders, setOrders] = useState([]);
@@ -61,13 +65,7 @@ const MyShipments = () => {
               <div className="bg-gray-50 px-6 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
                 <div className="flex items-center gap-3">
                   <span className="font-mono font-bold text-gray-700">#{order._id.slice(-6).toUpperCase()}</span>
-                  <span className={`badge badge-sm ${
-                    order.status === 'Paid' ? 'badge-warning text-white' : 
-                    order.status === 'Ready' ? 'badge-success text-white' : 
-                    order.status === 'Pending' ? 'badge-ghost text-gray-500' : 'badge-neutral'
-                  }`}>
-                    {order.status}
-                  </span>
+                  <StatusBadge status={order.status === 'Pending' ? 'Awaiting Payment' : order.status} />
                 </div>
                 <div className="text-xs text-gray-500 flex items-center gap-2">
                   <Clock size={12} /> {new Date(order.timestamp).toLocaleString()}
@@ -99,24 +97,21 @@ const MyShipments = () => {
                     <div className="flex items-center gap-2 mt-1 text-sm text-gray-600"><Phone size={14} /> {order.phone}</div>
                   </div>
 
-                  {/* LOGIC FIX: Handle Pending vs Paid vs Ready */}
                   {order.status === 'Paid' ? (
                     <button 
                       onClick={() => updateStatus(order._id, 'Ready')}
                       className="btn btn-primary btn-sm w-full gap-2 text-white shadow-lg hover:-translate-y-1 transition-transform"
                     >
-                      <CheckCircle size={14} /> Mark Ready
+                      <VerifyBtn title="Mark Ready" /> Mark as Ready
                     </button>
                   ) : order.status === 'Ready' ? (
-                    <button className="btn btn-success btn-sm w-full gap-2 text-white cursor-default">
-                      <Truck size={14} /> Ready for Pickup
-                    </button>
-                  ) : order.status === 'Pending' ? (
-                     <button className="btn btn-ghost btn-sm w-full text-orange-500 gap-2 cursor-default bg-orange-50">
-                        <Clock size={14} /> Awaiting Payment
-                     </button>
+                    <div className="alert alert-success py-2 text-xs font-bold flex justify-center">
+                      Ready for Pickup
+                    </div>
                   ) : (
-                    <button className="btn btn-disabled btn-sm w-full">Completed</button>
+                    <div className="alert alert-ghost py-2 text-xs flex justify-center">
+                      {order.status}
+                    </div>
                   )}
                 </div>
               </div>

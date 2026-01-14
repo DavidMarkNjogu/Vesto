@@ -1,18 +1,57 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Package, Search, Plus, Edit2, Archive } from 'lucide-react';
+import { Package, Search, Plus } from 'lucide-react';
+
+// NEW COMPONENTS
+import StatusBadge from '../../components/common/StatusBadge';
+import { ActionGroup, EditBtn, DeleteBtn } from '../../components/common/ActionButtons';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
+import Modal from '../../components/common/Modal';
 
 const SupplierProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modal State
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
-    // In a real app, we'd fetch /api/supplier/products
-    axios.get('http://localhost:5000/api/products')
-      .then(res => setProducts(res.data))
-      .catch(err => console.error(err))
-      .finally(() => setLoading(false));
+    fetchProducts();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/products');
+      setProducts(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- HANDLERS ---
+  const handleDeleteClick = (product) => {
+    setSelectedProduct(product);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`http://localhost:5000/api/admin/products/${selectedProduct._id}`);
+      setProducts(prev => prev.filter(p => p._id !== selectedProduct._id));
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Delete failed", error);
+    }
+  };
+
+  const handleEditClick = (product) => {
+    setSelectedProduct(product);
+    setIsEditModalOpen(true);
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -40,8 +79,8 @@ const SupplierProducts = () => {
               <th>Product</th>
               <th>Category</th>
               <th>Price</th>
-              <th>Stock Status</th>
-              <th>Actions</th>
+              <th>Status</th>
+              <th className="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -52,7 +91,7 @@ const SupplierProducts = () => {
                 <td>
                   <div className="flex items-center gap-3">
                     <div className="avatar">
-                      <div className="mask mask-squircle w-12 h-12">
+                      <div className="mask mask-squircle w-12 h-12 bg-gray-100">
                         <img src={product.image} alt={product.title} />
                       </div>
                     </div>
@@ -64,23 +103,56 @@ const SupplierProducts = () => {
                 </td>
                 <td><span className="badge badge-ghost badge-sm">{product.category}</span></td>
                 <td className="font-bold text-gray-700">KES {product.price.toLocaleString()}</td>
+                <td><StatusBadge status="active" /></td>
                 <td>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-sm">In Stock (8)</span>
-                  </div>
-                </td>
-                <td>
-                  <div className="flex gap-2">
-                    <button className="btn btn-square btn-ghost btn-sm text-gray-400 hover:text-blue-500"><Edit2 size={16}/></button>
-                    <button className="btn btn-square btn-ghost btn-sm text-gray-400 hover:text-red-500"><Archive size={16}/></button>
-                  </div>
+                  <ActionGroup>
+                    <EditBtn onClick={() => handleEditClick(product)} />
+                    <DeleteBtn onClick={() => handleDeleteClick(product)} />
+                  </ActionGroup>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* --- MODALS --- */}
+      
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Product"
+        message={`Are you sure you want to remove "${selectedProduct?.title}" from your inventory?`}
+        confirmText="Delete Product"
+      />
+
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Product"
+      >
+        {/* Simple Edit Form Mock */}
+        <div className="space-y-4">
+          <div>
+            <label className="label text-xs font-bold text-gray-500 uppercase">Product Title</label>
+            <input type="text" defaultValue={selectedProduct?.title} className="input input-bordered w-full" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label text-xs font-bold text-gray-500 uppercase">Price</label>
+              <input type="number" defaultValue={selectedProduct?.price} className="input input-bordered w-full" />
+            </div>
+            <div>
+              <label className="label text-xs font-bold text-gray-500 uppercase">Stock</label>
+              <input type="number" defaultValue="10" className="input input-bordered w-full" />
+            </div>
+          </div>
+          <div className="flex justify-end pt-4">
+            <button className="btn btn-primary text-white" onClick={() => setIsEditModalOpen(false)}>Save Changes</button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

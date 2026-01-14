@@ -284,6 +284,36 @@ app.get('/api/supplier/orders', async (req, res) => {
   // Mock fallback
   return res.json([]);
 });
+
+// --- UPDATE ORDER STATUS ---
+app.put('/api/orders/:id/status', async (req, res) => {
+  const { status } = req.body;
+  const { id } = req.params;
+
+  console.log(`🚚 Updating Order ${id} to status: ${status}`);
+
+  // 1. REAL DB MODE
+  if (dbConnected && Order) {
+    try {
+      const updatedOrder = await Order.findByIdAndUpdate(
+        id, 
+        { status: status }, 
+        { new: true }
+      );
+      return res.json({ success: true, order: updatedOrder });
+    } catch (error) {
+      console.error('Update failed:', error);
+      return res.status(500).json({ error: 'Update failed' });
+    }
+  }
+
+  // 2. MOCK MODE (Fallback)
+  // We need to find it in the MOCK_ORDERS array (defined inside the supplier route previously, 
+  // but let's make it accessible or just return success for the UI simulation)
+  return res.json({ success: true, mock: true, status: status });
+});
+
+
 const PORT = 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 // const express = require('express');

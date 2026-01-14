@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+const Modal = ({ isOpen, onClose, title, children, size = 'md', zIndex = 'z-[100]' }) => {
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === 'Escape') onClose();
@@ -26,11 +26,12 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
     lg: 'max-w-lg',
     xl: 'max-w-3xl',
     '2xl': 'max-w-5xl',
+    '3xl': 'max-w-6xl',
     full: 'max-w-[95vw]'
   };
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto" role="dialog" aria-modal="true">
+    <div className={`fixed inset-0 ${zIndex} overflow-y-auto`} role="dialog" aria-modal="true">
       <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
         
         {/* Backdrop */}

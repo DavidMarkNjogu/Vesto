@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Truck, Package, LogOut, Menu, X } from 'lucide-react';
-import useAuthStore from '../store/authStore'; // Import Store
+import { Truck, Package, LogOut, Menu, X, Settings, Box } from 'lucide-react';
+import useAuthStore from '../store/authStore';
 
 const SupplierLayout = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const logout = useAuthStore((state) => state.logout); // Get Logout Function
+  const logout = useAuthStore((state) => state.logout);
 
   const menuItems = [
     { path: '/supplier', title: 'Dashboard', icon: Package },
     { path: '/supplier/shipments', title: 'My Shipments', icon: Truck },
+    { path: '/supplier/products', title: 'Inventory', icon: Box }, // NEW
+    { path: '/supplier/settings', title: 'Settings', icon: Settings }, // NEW
   ];
 
   return (
@@ -48,7 +50,7 @@ const SupplierLayout = () => {
 
         <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
           <button 
-            onClick={logout} // WIRED UP HERE
+            onClick={logout}
             className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors w-full px-4 py-2 hover:bg-white/5 rounded-lg"
           >
             <LogOut size={20} />

@@ -261,6 +261,29 @@ app.delete('/api/admin/products/:id', async (req, res) => {
     return res.json({ success: true });
 });
 
+// --- SUPPLIER ROUTES ---
+app.get('/api/supplier/orders', async (req, res) => {
+  console.log('🚚 Supplier requesting orders...'); // Debug Log
+  
+  if (dbConnected && Order) {
+    try {
+      // 1. Fetch ALL orders first to debug (Broaden scope)
+      // We exclude only 'Cancelled' for now
+      const orders = await Order.find({ 
+        status: { $ne: 'Cancelled' } 
+      }).sort({ timestamp: -1 });
+      
+      console.log(`✅ Found ${orders.length} orders for supplier.`);
+      return res.json(orders);
+    } catch (error) {
+      console.error('❌ Supplier Fetch Error:', error);
+      return res.status(500).json({ error: 'Fetch failed' });
+    }
+  }
+  
+  // Mock fallback
+  return res.json([]);
+});
 const PORT = 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
 // const express = require('express');

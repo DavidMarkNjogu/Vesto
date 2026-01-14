@@ -10,7 +10,8 @@ import { optimizeImage, removeBackground, convertToBase64, validateImage } from 
 // COMPONENT IMPORTS
 import StatCard from '../components/admin/StatCard';
 import StatusBadge from '../components/common/StatusBadge';
-import ConfirmationModal from '../components/common/ConfirmationModal'; // Import this
+import ConfirmationModal from '../components/common/ConfirmationModal';
+import Modal from '../components/common/Modal'; // Import Generic Modal for Success messages
 
 const Dashboard = () => {
   // --- STATE ---
@@ -26,8 +27,10 @@ const Dashboard = () => {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   
-  // Error Modal State
+  // Modal States for Feedback
   const [errorModal, setErrorModal] = useState({ isOpen: false, title: '', message: '' });
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, productId: null }); // NEW: Delete State
+  const [successModal, setSuccessModal] = useState({ isOpen: false, title: '', message: '' }); // NEW: Success State
 
   const getInitialFormState = () => ({
     title: '', price: '', image: '', description: '', category: '', rating: '', buyingPrice: '',
@@ -82,11 +85,7 @@ const Dashboard = () => {
   const handleImageUpload = async (file, angle = 'main') => {
     const validation = validateImage(file);
     if (!validation.valid) {
-      setErrorModal({ 
-        isOpen: true, 
-        title: 'Image Error', 
-        message: validation.error 
-      });
+      setErrorModal({ isOpen: true, title: 'Upload Error', message: validation.error });
       return;
     }
 
@@ -103,25 +102,15 @@ const Dashboard = () => {
         setImageAngles(prev => ({ ...prev, [angle]: base64 }));
       }
     } catch (error) {
-      console.error('Upload failed:', error);
-      setErrorModal({ 
-        isOpen: true, 
-        title: 'Upload Failed', 
-        message: 'Could not process image. Please try a smaller file or different format.' 
-      });
+      setErrorModal({ isOpen: true, title: 'Upload Failed', message: 'Could not process image.' });
     } finally {
       setUploadingImages(false);
     }
   };
 
-  // --- CRUD HANDLERS (REFACTORED) ---
-  
-  // 1. The Core Logic (Reusable)
+  // --- CRUD LOGIC ---
   const processSubmission = async () => {
-    // Basic Validation
-    if (!productForm.title || !productForm.price) {
-        throw new Error("Product title and price are required.");
-    }
+    if (!productForm.title || !productForm.price) throw new Error("Title and Price are required.");
 
     const allImages = { main: productForm.image, ...imageAngles };
     const formData = {
@@ -136,41 +125,51 @@ const Dashboard = () => {
       await axios.post('http://localhost:5000/api/admin/products', formData);
     }
     
-    // Success Logic
     closeForm();
     fetchDashboardData();
-    setErrorModal({ isOpen: false, title: '', message: '' }); // Close error modal if it was open
+    setErrorModal({ isOpen: false, title: '', message: '' }); // Close error if open
+    // Show Success
+    setSuccessModal({ 
+      isOpen: true, 
+      title: editingProduct ? 'Product Updated' : 'Product Created', 
+      message: `Successfully ${editingProduct ? 'updated' : 'created'} "${formData.title}".` 
+    });
   };
 
-  // 2. The Event Handler
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
       await processSubmission();
     } catch (error) {
-      console.error('Save failed:', error);
-      // Extract meaningful error message
-      const errorMessage = error.response?.data?.error || error.message || "An unexpected error occurred.";
-      
-      setErrorModal({
-        isOpen: true,
-        title: 'Save Failed',
-        message: `${errorMessage}. Do you want to try again?`
-      });
+      const msg = error.response?.data?.error || error.message || "Unknown error";
+      setErrorModal({ isOpen: true, title: 'Save Failed', message: `${msg}. Try again?` });
     }
   };
 
-  // 3. The "Try Again" Handler
-  const handleTryAgain = async () => {
+  const handleTryAgain = () => {
+    processSubmission().catch(error => {
+       const msg = error.response?.data?.error || error.message;
+       setErrorModal({ isOpen: true, title: 'Retry Failed', message: msg });
+    });
+  };
+
+  // --- DELETE LOGIC ---
+  const triggerDelete = (product) => {
+    setDeleteModal({ isOpen: true, productId: product._id, productName: product.title });
+  };
+
+  const confirmDelete = async () => {
     try {
-        await processSubmission();
+      await axios.delete(`http://localhost:5000/api/admin/products/${deleteModal.productId}`);
+      setDeleteModal({ isOpen: false, productId: null });
+      fetchDashboardData();
+      setSuccessModal({ isOpen: true, title: 'Product Deleted', message: 'The product has been removed from inventory.' });
     } catch (error) {
-        // If it fails again, update the message
-        const errorMessage = error.response?.data?.error || error.message || "Retry failed.";
-        setErrorModal(prev => ({ ...prev, message: `Retry failed: ${errorMessage}` }));
+      setErrorModal({ isOpen: true, title: 'Delete Failed', message: 'Could not delete product.' });
     }
   };
 
+  // --- HELPERS ---
   const closeForm = () => {
     setShowProductForm(false);
     setEditingProduct(null);
@@ -194,7 +193,6 @@ const Dashboard = () => {
       sizes: product.sizes || {}
     });
     setImagePreview(product.image);
-    
     if (product.images && product.images.length > 0) {
       setImageAngles({
         front: product.images[0] || null,
@@ -207,23 +205,12 @@ const Dashboard = () => {
     setShowProductForm(true);
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (!confirm('Are you sure?')) return;
-    try {
-      await axios.delete(`http://localhost:5000/api/admin/products/${id}`);
-      fetchDashboardData();
-    } catch (error) {
-      console.error('Delete failed:', error);
-      alert("Failed to delete product."); // Simple alert is fine here for now
-    }
-  };
-
   if (loading) return <div className="flex justify-center items-center h-full"><span className="loading loading-spinner text-primary"></span></div>;
 
   return (
     <div className="space-y-6">
       
-      {/* 1. DASHBOARD CONTROLS */}
+      {/* 1. DASHBOARD HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-3 rounded-xl shadow-sm border border-gray-100">
         <div className="tabs tabs-boxed bg-gray-100 p-1">
           {['overview', 'products', 'orders'].map(tab => (
@@ -252,7 +239,8 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* 2. CONTENT AREA */}
+      {/* 2. TAB CONTENT */}
+      
       {activeTab === 'overview' && (
         <div className="space-y-6 animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -331,7 +319,7 @@ const Dashboard = () => {
                     <td className="text-right pr-6">
                       <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => handleEditProduct(product)} className="btn btn-square btn-xs btn-ghost text-blue-600 hover:bg-blue-50"><Edit size={14}/></button>
-                        <button onClick={() => handleDeleteProduct(product._id)} className="btn btn-square btn-xs btn-ghost text-red-600 hover:bg-red-50"><Trash2 size={14}/></button>
+                        <button onClick={() => triggerDelete(product)} className="btn btn-square btn-xs btn-ghost text-red-600 hover:bg-red-50"><Trash2 size={14}/></button>
                       </div>
                     </td>
                   </tr>
@@ -367,19 +355,55 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* --- ERROR MODAL (NEW: Handles Errors & Retry) --- */}
+      {/* --- FEEDBACK MODALS --- */}
+      
+      {/* 1. ERROR MODAL */}
       <ConfirmationModal
         isOpen={errorModal.isOpen}
         onClose={() => setErrorModal({ ...errorModal, isOpen: false })}
-        onConfirm={handleTryAgain} // WIRED UP TO RETRY
+        onConfirm={handleTryAgain}
         title={errorModal.title}
         message={errorModal.message}
         confirmText="Try Again"
         confirmColor="bg-red-600 hover:bg-red-700"
-        zIndex="z-[200]" // Ensures it sits ABOVE the Product Form
+        zIndex="z-[200]"
       />
 
-      {/* --- PRODUCT MODAL --- */}
+      {/* 2. DELETE CONFIRMATION MODAL */}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, productId: null })}
+        onConfirm={confirmDelete}
+        title="Delete Product?"
+        message={`Are you sure you want to permanently delete "${deleteModal.productName || 'this product'}"? This action cannot be undone.`}
+        confirmText="Delete Permanently"
+        confirmColor="bg-red-600 hover:bg-red-700"
+        zIndex="z-[150]"
+      />
+
+      {/* 3. SUCCESS MODAL */}
+      <Modal 
+        isOpen={successModal.isOpen} 
+        onClose={() => setSuccessModal({ ...successModal, isOpen: false })}
+        title={successModal.title}
+        size="sm"
+        zIndex="z-[200]"
+      >
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+            <Check size={32} className="text-green-600" strokeWidth={3} />
+          </div>
+          <p className="text-gray-600 mb-6">{successModal.message}</p>
+          <button 
+            onClick={() => setSuccessModal({ ...successModal, isOpen: false })}
+            className="btn btn-primary w-full text-white"
+          >
+            OK, Great!
+          </button>
+        </div>
+      </Modal>
+
+      {/* --- PRODUCT FORM MODAL --- */}
       {showProductForm && (
         <div className="fixed inset-0 z-[100] overflow-y-auto" aria-modal="true" role="dialog">
           <div className="flex min-h-screen items-center justify-center p-4">
@@ -404,7 +428,7 @@ const Dashboard = () => {
               
               <div className="p-8 overflow-y-auto flex-1 bg-gray-50 custom-scrollbar">
                 <form id="product-form" onSubmit={handleProductSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                   {/* ... (Form Content Preserved) ... */}
+                   
                    {/* LEFT: Details */}
                    <div className="space-y-6">
                       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -415,7 +439,14 @@ const Dashboard = () => {
                         <div className="space-y-5">
                           <div className="form-control">
                             <label className="label"><span className="label-text font-bold text-gray-700">Product Title</span></label>
-                            <input type="text" className="input input-bordered w-full focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g. Vesto Classic Air Max" value={productForm.title} onChange={e => setProductForm({...productForm, title: e.target.value})} required />
+                            <input 
+                              type="text" 
+                              className="input input-bordered w-full focus:border-primary focus:ring-1 focus:ring-primary" 
+                              placeholder="e.g. Vesto Classic Air Max" 
+                              value={productForm.title} 
+                              onChange={e => setProductForm({...productForm, title: e.target.value})} 
+                              required 
+                            />
                           </div>
                           
                           <div className="grid grid-cols-2 gap-4">
@@ -438,13 +469,19 @@ const Dashboard = () => {
                           <div className="form-control">
                               <label className="label"><span className="label-text font-bold text-gray-700">Category</span></label>
                               <select className="select select-bordered w-full font-medium" value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})}>
-                                <option value="">Select Category...</option><option>Sneakers</option><option>Boots</option><option>Formal</option><option>Sandals</option><option>Athletic</option>
+                                <option value="">Select Category...</option>
+                                <option>Sneakers</option><option>Boots</option><option>Formal</option><option>Sandals</option><option>Athletic</option>
                               </select>
                           </div>
 
                           <div className="form-control">
                             <label className="label"><span className="label-text font-bold text-gray-700">Description</span></label>
-                            <textarea className="textarea textarea-bordered h-32 resize-none text-sm leading-relaxed" placeholder="Describe material, fit, and key features..." value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})}></textarea>
+                            <textarea 
+                              className="textarea textarea-bordered h-32 resize-none text-sm leading-relaxed" 
+                              placeholder="Describe material, fit, and key features..." 
+                              value={productForm.description} 
+                              onChange={e => setProductForm({...productForm, description: e.target.value})}
+                            ></textarea>
                           </div>
                         </div>
                       </div>
@@ -508,7 +545,7 @@ const Dashboard = () => {
                                 <AlertCircle size={18} className="shrink-0 mt-0.5" />
                                 <div>
                                   <h3 className="font-bold text-xs">Pro Tip:</h3>
-                                  <p className="text-xs mt-0.5 opacity-90">Images are automatically optimized. Uploading multiple angles increases conversion by 30%.</p>
+                                  <p className="text-xs mt-0.5 opacity-90">Images are automatically optimized and backgrounds removed. Uploading multiple angles increases conversion by 30%.</p>
                                 </div>
                               </div>
                           </div>
@@ -517,6 +554,7 @@ const Dashboard = () => {
                 </form>
               </div>
 
+              {/* Footer Actions */}
               <div className="bg-white px-8 py-5 border-t border-gray-200 flex justify-end gap-4 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
                 <button type="button" className="btn btn-ghost hover:bg-gray-100 font-medium text-gray-600 px-6" onClick={closeForm}>Cancel</button>
                 <button type="submit" form="product-form" className="btn btn-primary text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all px-8 text-base font-bold">

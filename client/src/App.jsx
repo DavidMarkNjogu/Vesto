@@ -27,8 +27,12 @@ import OrderSuccess from './pages/shop/OrderSuccess';
 import OrderTracking from './pages/shop/OrderTracking';
 
 // PAGES - ADMIN
-import Dashboard from './pages/Dashboard';
-import AdminPlaceholder from './pages/admin/AdminPlaceholder';
+import DashboardOverview from './pages/admin/DashboardOverview';
+import ProductListAdmin from './pages/admin/inventory/ProductList';
+import OrderListAdmin from './pages/admin/orders/OrderList';
+import CustomerList from './pages/admin/customers/CustomerList';
+import ProfitLoss from './pages/admin/finance/ProfitLoss';
+import Settings from './pages/admin/Settings';
 
 // PAGES - SUPPLIER
 import SupplierDashboard from './pages/supplier/SupplierDashboard';
@@ -75,12 +79,12 @@ function App() {
         {/* --- PROTECTED ADMIN ROUTES --- */}
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="orders" element={<AdminPlaceholder />} />
-            <Route path="inventory" element={<AdminPlaceholder />} />
-            <Route path="customers" element={<AdminPlaceholder />} />
-            <Route path="finance" element={<AdminPlaceholder />} />
-            <Route path="settings" element={<AdminPlaceholder />} />
+          <Route index element={<DashboardOverview />} />
+            <Route path="inventory" element={<ProductListAdmin />} />
+            <Route path="orders" element={<OrderListAdmin />} />
+            <Route path="customers" element={<CustomerList />} />
+            <Route path="finance" element={<ProfitLoss />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Route>
 

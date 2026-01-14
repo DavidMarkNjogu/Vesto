@@ -7,9 +7,10 @@ import {
 } from 'lucide-react';
 import { optimizeImage, removeBackground, convertToBase64, validateImage } from '../utils/imageOptimizer';
 
-// COMPONENT IMPORTS (Pure UI - No Layout Wrappers)
+// COMPONENT IMPORTS
 import StatCard from '../components/admin/StatCard';
 import StatusBadge from '../components/common/StatusBadge';
+import ConfirmationModal from '../components/common/ConfirmationModal'; // Import this
 
 const Dashboard = () => {
   // --- STATE ---
@@ -25,6 +26,9 @@ const Dashboard = () => {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   
+  // Error Modal State
+  const [errorModal, setErrorModal] = useState({ isOpen: false, title: '', message: '' });
+
   const getInitialFormState = () => ({
     title: '', price: '', image: '', description: '', category: '', rating: '', buyingPrice: '',
     images: [], colors: [], sizes: {}
@@ -57,7 +61,6 @@ const Dashboard = () => {
       setProducts(prodData);
       setOrders(ordData);
       
-      // Calculate Stats
       const totalRevenue = ordData.reduce((sum, order) => sum + (order.total || 0), 0);
       const today = new Date().toDateString();
       const todayOrders = ordData.filter(order => new Date(order.timestamp).toDateString() === today).length;
@@ -78,7 +81,14 @@ const Dashboard = () => {
   // --- IMAGE LOGIC ---
   const handleImageUpload = async (file, angle = 'main') => {
     const validation = validateImage(file);
-    if (!validation.valid) return alert(validation.error);
+    if (!validation.valid) {
+      setErrorModal({ 
+        isOpen: true, 
+        title: 'Image Error', 
+        message: validation.error 
+      });
+      return;
+    }
 
     setUploadingImages(true);
     try {
@@ -94,34 +104,70 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Failed to upload image');
+      setErrorModal({ 
+        isOpen: true, 
+        title: 'Upload Failed', 
+        message: 'Could not process image. Please try a smaller file or different format.' 
+      });
     } finally {
       setUploadingImages(false);
     }
   };
 
-  // --- CRUD HANDLERS ---
+  // --- CRUD HANDLERS (REFACTORED) ---
+  
+  // 1. The Core Logic (Reusable)
+  const processSubmission = async () => {
+    // Basic Validation
+    if (!productForm.title || !productForm.price) {
+        throw new Error("Product title and price are required.");
+    }
+
+    const allImages = { main: productForm.image, ...imageAngles };
+    const formData = {
+      ...productForm,
+      images: Object.values(allImages).filter(img => img !== null),
+      image: productForm.image || imageAngles.front
+    };
+
+    if (editingProduct) {
+      await axios.put(`http://localhost:5000/api/admin/products/${editingProduct._id}`, formData);
+    } else {
+      await axios.post('http://localhost:5000/api/admin/products', formData);
+    }
+    
+    // Success Logic
+    closeForm();
+    fetchDashboardData();
+    setErrorModal({ isOpen: false, title: '', message: '' }); // Close error modal if it was open
+  };
+
+  // 2. The Event Handler
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
-      const allImages = { main: productForm.image, ...imageAngles };
-      const formData = {
-        ...productForm,
-        images: Object.values(allImages).filter(img => img !== null),
-        image: productForm.image || imageAngles.front
-      };
-
-      if (editingProduct) {
-        await axios.put(`http://localhost:5000/api/admin/products/${editingProduct._id}`, formData);
-      } else {
-        await axios.post('http://localhost:5000/api/admin/products', formData);
-      }
-      
-      closeForm();
-      fetchDashboardData();
+      await processSubmission();
     } catch (error) {
       console.error('Save failed:', error);
-      alert('Error saving product');
+      // Extract meaningful error message
+      const errorMessage = error.response?.data?.error || error.message || "An unexpected error occurred.";
+      
+      setErrorModal({
+        isOpen: true,
+        title: 'Save Failed',
+        message: `${errorMessage}. Do you want to try again?`
+      });
+    }
+  };
+
+  // 3. The "Try Again" Handler
+  const handleTryAgain = async () => {
+    try {
+        await processSubmission();
+    } catch (error) {
+        // If it fails again, update the message
+        const errorMessage = error.response?.data?.error || error.message || "Retry failed.";
+        setErrorModal(prev => ({ ...prev, message: `Retry failed: ${errorMessage}` }));
     }
   };
 
@@ -149,7 +195,6 @@ const Dashboard = () => {
     });
     setImagePreview(product.image);
     
-    // Restore Angles
     if (product.images && product.images.length > 0) {
       setImageAngles({
         front: product.images[0] || null,
@@ -169,10 +214,10 @@ const Dashboard = () => {
       fetchDashboardData();
     } catch (error) {
       console.error('Delete failed:', error);
+      alert("Failed to delete product."); // Simple alert is fine here for now
     }
   };
 
-  // --- RENDERERS ---
   if (loading) return <div className="flex justify-center items-center h-full"><span className="loading loading-spinner text-primary"></span></div>;
 
   return (
@@ -192,7 +237,6 @@ const Dashboard = () => {
           ))}
         </div>
         
-        {/* Dynamic Action Buttons */}
         {activeTab === 'products' && (
           <button 
             onClick={() => { closeForm(); setShowProductForm(true); }}
@@ -209,8 +253,6 @@ const Dashboard = () => {
       </div>
 
       {/* 2. CONTENT AREA */}
-      
-      {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <div className="space-y-6 animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -263,7 +305,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* PRODUCTS TAB */}
       {activeTab === 'products' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
           <div className="overflow-x-auto">
@@ -301,7 +342,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ORDERS TAB */}
       {activeTab === 'orders' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-fade-in">
           <table className="table w-full">
@@ -311,14 +351,14 @@ const Dashboard = () => {
             <tbody>
               {orders.map(order => (
                 <tr key={order._id} className="hover:bg-gray-50 border-b border-gray-50 last:border-none">
-                  <td className="pl-6 font-mono text-xs text-gray-500">#{order._id.slice(-8).toUpperCase()}</td>
+                  <td className="pl-6 font-mono text-xs">#{order._id.slice(-8).toUpperCase()}</td>
                   <td className="text-sm text-gray-600">{new Date(order.timestamp).toLocaleDateString()}</td>
                   <td>
-                    <div className="font-bold text-sm text-gray-800">{order.phone}</div>
+                    <div className="font-bold text-sm">{order.phone}</div>
                     <div className="text-xs text-gray-500 truncate max-w-[150px]">{order.location}</div>
                   </td>
                   <td><span className="badge badge-ghost badge-sm font-normal text-gray-600">{order.cartItems?.length || 0} items</span></td>
-                  <td className="font-bold text-gray-800">KES {order.total.toLocaleString()}</td>
+                  <td className="font-bold">KES {order.total.toLocaleString()}</td>
                   <td><StatusBadge status={order.status} /></td>
                 </tr>
               ))}
@@ -327,14 +367,26 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* --- PRODUCT MODAL (RESTORED STYLE) --- */}
+      {/* --- ERROR MODAL (NEW: Handles Errors & Retry) --- */}
+      <ConfirmationModal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ ...errorModal, isOpen: false })}
+        onConfirm={handleTryAgain} // WIRED UP TO RETRY
+        title={errorModal.title}
+        message={errorModal.message}
+        confirmText="Try Again"
+        confirmColor="bg-red-600 hover:bg-red-700"
+        zIndex="z-[200]" // Ensures it sits ABOVE the Product Form
+      />
+
+      {/* --- PRODUCT MODAL --- */}
       {showProductForm && (
         <div className="fixed inset-0 z-[100] overflow-y-auto" aria-modal="true" role="dialog">
           <div className="flex min-h-screen items-center justify-center p-4">
             <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onClick={closeForm}></div>
             
             <div className="relative bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              {/* Header: Restored Vibrant Look */}
+              {/* Header */}
               <div className="bg-primary px-8 py-5 flex justify-between items-center text-white shadow-md">
                 <div className="flex items-center gap-3">
                    <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md border border-white/10">
@@ -352,7 +404,7 @@ const Dashboard = () => {
               
               <div className="p-8 overflow-y-auto flex-1 bg-gray-50 custom-scrollbar">
                 <form id="product-form" onSubmit={handleProductSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                   
+                   {/* ... (Form Content Preserved) ... */}
                    {/* LEFT: Details */}
                    <div className="space-y-6">
                       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -362,33 +414,20 @@ const Dashboard = () => {
                         
                         <div className="space-y-5">
                           <div className="form-control">
-                            <label className="label">
-                              <span className="label-text font-bold text-gray-700">Product Title</span>
-                            </label>
-                            <input 
-                              type="text" 
-                              className="input input-bordered w-full focus:border-primary focus:ring-1 focus:ring-primary" 
-                              placeholder="e.g. Vesto Classic Air Max" 
-                              value={productForm.title} 
-                              onChange={e => setProductForm({...productForm, title: e.target.value})} 
-                              required 
-                            />
+                            <label className="label"><span className="label-text font-bold text-gray-700">Product Title</span></label>
+                            <input type="text" className="input input-bordered w-full focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g. Vesto Classic Air Max" value={productForm.title} onChange={e => setProductForm({...productForm, title: e.target.value})} required />
                           </div>
                           
                           <div className="grid grid-cols-2 gap-4">
                             <div className="form-control">
-                              <label className="label">
-                                <span className="label-text font-bold text-gray-700">Selling Price</span>
-                              </label>
+                              <label className="label"><span className="label-text font-bold text-gray-700">Selling Price</span></label>
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">KES</span>
                                 <input type="number" className="input input-bordered w-full pl-12" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} required />
                               </div>
                             </div>
                             <div className="form-control">
-                              <label className="label">
-                                <span className="label-text font-bold text-gray-700">Buying Price</span>
-                              </label>
+                              <label className="label"><span className="label-text font-bold text-gray-700">Buying Price</span></label>
                               <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">KES</span>
                                 <input type="number" className="input input-bordered w-full pl-12" value={productForm.buyingPrice} onChange={e => setProductForm({...productForm, buyingPrice: e.target.value})} required />
@@ -397,25 +436,15 @@ const Dashboard = () => {
                           </div>
 
                           <div className="form-control">
-                              <label className="label">
-                                <span className="label-text font-bold text-gray-700">Category</span>
-                              </label>
+                              <label className="label"><span className="label-text font-bold text-gray-700">Category</span></label>
                               <select className="select select-bordered w-full font-medium" value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})}>
-                                <option value="">Select Category...</option>
-                                <option>Sneakers</option><option>Boots</option><option>Formal</option><option>Sandals</option><option>Athletic</option>
+                                <option value="">Select Category...</option><option>Sneakers</option><option>Boots</option><option>Formal</option><option>Sandals</option><option>Athletic</option>
                               </select>
                           </div>
 
                           <div className="form-control">
-                            <label className="label">
-                              <span className="label-text font-bold text-gray-700">Description</span>
-                            </label>
-                            <textarea 
-                              className="textarea textarea-bordered h-32 resize-none text-sm leading-relaxed" 
-                              placeholder="Describe material, fit, and key features..." 
-                              value={productForm.description} 
-                              onChange={e => setProductForm({...productForm, description: e.target.value})}
-                            ></textarea>
+                            <label className="label"><span className="label-text font-bold text-gray-700">Description</span></label>
+                            <textarea className="textarea textarea-bordered h-32 resize-none text-sm leading-relaxed" placeholder="Describe material, fit, and key features..." value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})}></textarea>
                           </div>
                         </div>
                       </div>
@@ -428,11 +457,9 @@ const Dashboard = () => {
                             <ImageIcon size={16} className="text-primary"/> Product Gallery
                           </h4>
 
-                          {/* Main Upload - Restored Look */}
+                          {/* Main Upload */}
                           <div className="form-control mb-6">
-                              <label className="label">
-                                <span className="label-text font-bold text-gray-700">Main Product Image</span>
-                              </label>
+                              <label className="label"><span className="label-text font-bold text-gray-700">Main Product Image</span></label>
                               <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer bg-gray-50 hover:bg-blue-50 hover:border-primary/50 transition-all duration-300 group" onClick={() => fileInputRef.current?.click()}>
                                   {imagePreview ? (
                                       <div className="relative">
@@ -455,12 +482,9 @@ const Dashboard = () => {
                               {uploadingImages && <progress className="progress progress-primary w-full mt-2 h-1" />}
                           </div>
 
-                          {/* Angles - Restored Grid */}
+                          {/* Angles */}
                           <div className="form-control">
-                              <label className="label flex justify-between items-end">
-                                <span className="label-text font-bold text-gray-700">Additional Angles</span>
-                                <span className="label-text-alt text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Optional</span>
-                              </label>
+                              <label className="label flex justify-between items-end"><span className="label-text font-bold text-gray-700">Additional Angles</span><span className="label-text-alt text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Optional</span></label>
                               <div className="grid grid-cols-5 gap-3 mt-1">
                                 {['front', 'side', 'back', 'top', 'bottom'].map((angle) => (
                                   <div key={angle} className="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center relative hover:border-primary/50 hover:bg-blue-50 transition-all bg-white group cursor-pointer">
@@ -480,14 +504,11 @@ const Dashboard = () => {
                                 ))}
                               </div>
                               
-                              {/* Restored Pro Tip Alert */}
                               <div className="alert alert-info mt-4 py-3 flex items-start shadow-sm border border-blue-100 bg-blue-50 text-blue-800">
                                 <AlertCircle size={18} className="shrink-0 mt-0.5" />
                                 <div>
                                   <h3 className="font-bold text-xs">Pro Tip:</h3>
-                                  <p className="text-xs mt-0.5 opacity-90">
-                                    Images are automatically optimized and backgrounds removed. Uploading multiple angles can increase conversion rates by 30%.
-                                  </p>
+                                  <p className="text-xs mt-0.5 opacity-90">Images are automatically optimized. Uploading multiple angles increases conversion by 30%.</p>
                                 </div>
                               </div>
                           </div>
@@ -496,7 +517,6 @@ const Dashboard = () => {
                 </form>
               </div>
 
-              {/* Footer Actions */}
               <div className="bg-white px-8 py-5 border-t border-gray-200 flex justify-end gap-4 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
                 <button type="button" className="btn btn-ghost hover:bg-gray-100 font-medium text-gray-600 px-6" onClick={closeForm}>Cancel</button>
                 <button type="submit" form="product-form" className="btn btn-primary text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all px-8 text-base font-bold">

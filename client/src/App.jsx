@@ -7,7 +7,7 @@ import useCartStore from './store/cartStore';
 import { setupOfflineListeners, isOnline } from './utils/offlineSync';
 import { ROUTES } from './routes';
 
-// AUTH (New Integration)
+// AUTH
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './pages/auth/Login';
 
@@ -33,6 +33,8 @@ import AdminPlaceholder from './pages/admin/AdminPlaceholder';
 // PAGES - SUPPLIER
 import SupplierDashboard from './pages/supplier/SupplierDashboard';
 import MyShipments from './pages/supplier/MyShipments';
+import SupplierProducts from './pages/supplier/SupplierProducts'; // NEW
+import SupplierSettings from './pages/supplier/SupplierSettings'; // NEW
 
 function App() {
   const { syncFromOffline } = useCartStore();
@@ -71,11 +73,9 @@ function App() {
         </Route>
 
         {/* --- PROTECTED ADMIN ROUTES --- */}
-        {/* This wrapper forces the Login Redirect if not authenticated */}
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
-            {/* WIRED UP REAL PATHS */}
             <Route path="orders" element={<AdminPlaceholder />} />
             <Route path="inventory" element={<AdminPlaceholder />} />
             <Route path="customers" element={<AdminPlaceholder />} />
@@ -89,6 +89,8 @@ function App() {
           <Route path={ROUTES.SUPPLIER.DASHBOARD} element={<SupplierLayout />}>
             <Route index element={<SupplierDashboard />} />
             <Route path="shipments" element={<MyShipments />} />
+            <Route path="products" element={<SupplierProducts />} /> {/* NEW */}
+            <Route path="settings" element={<SupplierSettings />} /> {/* NEW */}
           </Route>
         </Route>
 

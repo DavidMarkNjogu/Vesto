@@ -28,6 +28,7 @@ import OrderTracking from './pages/shop/OrderTracking';
 
 // PAGES - ADMIN
 import Dashboard from './pages/Dashboard';
+import AdminPlaceholder from './pages/admin/AdminPlaceholder';
 
 // PAGES - SUPPLIER
 import SupplierDashboard from './pages/supplier/SupplierDashboard';
@@ -74,8 +75,12 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path={ROUTES.ADMIN.DASHBOARD} element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
-            <Route path="inventory" element={<Dashboard />} /> 
-            <Route path="orders" element={<Dashboard />} />
+            {/* WIRED UP REAL PATHS */}
+            <Route path="orders" element={<AdminPlaceholder />} />
+            <Route path="inventory" element={<AdminPlaceholder />} />
+            <Route path="customers" element={<AdminPlaceholder />} />
+            <Route path="finance" element={<AdminPlaceholder />} />
+            <Route path="settings" element={<AdminPlaceholder />} />
           </Route>
         </Route>
 

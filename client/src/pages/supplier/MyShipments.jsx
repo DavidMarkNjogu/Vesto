@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Filter, Box, MapPin, Phone, CheckCircle, Clock, Truck } from 'lucide-react';
+import { Search, Filter, Box, MapPin, Phone, CheckCircle, Clock, Truck, AlertCircle } from 'lucide-react';
 
 const MyShipments = () => {
   const [orders, setOrders] = useState([]);
@@ -23,22 +23,19 @@ const MyShipments = () => {
 
   const updateStatus = async (orderId, newStatus) => {
     try {
-      // Optimistic update
       setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
-      // API Call
       await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, { status: newStatus });
     } catch (err) {
       console.error("Update failed", err);
-      fetchOrders(); // Revert on error
+      fetchOrders();
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-800">My Shipments</h1>
         <div className="flex gap-2 w-full md:w-auto">
-          {/* ... Search Inputs (Keep existing) ... */}
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input type="text" placeholder="Search Order ID..." className="input input-bordered input-sm w-full pl-9" />
@@ -66,7 +63,8 @@ const MyShipments = () => {
                   <span className="font-mono font-bold text-gray-700">#{order._id.slice(-6).toUpperCase()}</span>
                   <span className={`badge badge-sm ${
                     order.status === 'Paid' ? 'badge-warning text-white' : 
-                    order.status === 'Ready' ? 'badge-success text-white' : 'badge-ghost'
+                    order.status === 'Ready' ? 'badge-success text-white' : 
+                    order.status === 'Pending' ? 'badge-ghost text-gray-500' : 'badge-neutral'
                   }`}>
                     {order.status}
                   </span>
@@ -101,6 +99,7 @@ const MyShipments = () => {
                     <div className="flex items-center gap-2 mt-1 text-sm text-gray-600"><Phone size={14} /> {order.phone}</div>
                   </div>
 
+                  {/* LOGIC FIX: Handle Pending vs Paid vs Ready */}
                   {order.status === 'Paid' ? (
                     <button 
                       onClick={() => updateStatus(order._id, 'Ready')}
@@ -112,6 +111,10 @@ const MyShipments = () => {
                     <button className="btn btn-success btn-sm w-full gap-2 text-white cursor-default">
                       <Truck size={14} /> Ready for Pickup
                     </button>
+                  ) : order.status === 'Pending' ? (
+                     <button className="btn btn-ghost btn-sm w-full text-orange-500 gap-2 cursor-default bg-orange-50">
+                        <Clock size={14} /> Awaiting Payment
+                     </button>
                   ) : (
                     <button className="btn btn-disabled btn-sm w-full">Completed</button>
                   )}

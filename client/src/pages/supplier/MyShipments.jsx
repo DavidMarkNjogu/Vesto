@@ -1,28 +1,19 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Filter, Box, MapPin, Phone, Clock, AlertCircle } from 'lucide-react';
-
-// NEW COMPONENTS
-import StatusBadge from '../../components/common/StatusBadge';
-import { ActionGroup, VerifyBtn } from '../../components/common/ActionButtons';
+import { Search, Filter, Box, MapPin, Phone, CheckCircle, Clock, Truck } from 'lucide-react';
 
 const MyShipments = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  useEffect(() => { fetchOrders(); }, []);
 
   const fetchOrders = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/supplier/orders');
       if (Array.isArray(res.data)) setOrders(res.data);
-    } catch (err) {
-      console.error("Failed to load shipments", err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("Failed to load shipments", err); } 
+    finally { setLoading(false); }
   };
 
   const updateStatus = async (orderId, newStatus) => {
@@ -36,11 +27,11 @@ const MyShipments = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">My Shipments</h1>
-        <div className="flex gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
+    <div className="space-y-6 animate-fade-in pb-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">My Shipments</h1>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input type="text" placeholder="Search Order ID..." className="input input-bordered input-sm w-full pl-9" />
           </div>
@@ -60,20 +51,19 @@ const MyShipments = () => {
         <div className="grid gap-4">
           {orders.map((order) => (
             <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
-              
               {/* Header */}
-              <div className="bg-gray-50 px-6 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
+              <div className="bg-gray-50 px-4 sm:px-6 py-3 border-b border-gray-100 flex flex-wrap justify-between items-center gap-2">
                 <div className="flex items-center gap-3">
                   <span className="font-mono font-bold text-gray-700">#{order._id.slice(-6).toUpperCase()}</span>
-                  <StatusBadge status={order.status === 'Pending' ? 'Awaiting Payment' : order.status} />
+                  <span className={`badge badge-sm ${order.status === 'Paid' ? 'badge-warning text-white' : order.status === 'Ready' ? 'badge-success text-white' : 'badge-ghost text-gray-500'}`}>
+                    {order.status === 'Pending' ? 'Awaiting Payment' : order.status}
+                  </span>
                 </div>
-                <div className="text-xs text-gray-500 flex items-center gap-2">
-                  <Clock size={12} /> {new Date(order.timestamp).toLocaleString()}
-                </div>
+                <div className="text-xs text-gray-500 flex items-center gap-2"><Clock size={12} /> {new Date(order.timestamp).toLocaleString()}</div>
               </div>
 
-              <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Packing List */}
+              {/* Body */}
+              <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-3">
                   <h4 className="text-xs font-bold text-gray-400 uppercase">Packing List</h4>
                   {order.cartItems.map((item, idx) => (
@@ -88,7 +78,6 @@ const MyShipments = () => {
                   ))}
                 </div>
 
-                {/* Actions */}
                 <div className="space-y-4 border-l border-gray-100 pl-0 lg:pl-6 pt-4 lg:pt-0 flex flex-col justify-between">
                   <div>
                     <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Delivery To</h4>
@@ -98,20 +87,13 @@ const MyShipments = () => {
                   </div>
 
                   {order.status === 'Paid' ? (
-                    <button 
-                      onClick={() => updateStatus(order._id, 'Ready')}
-                      className="btn btn-primary btn-sm w-full gap-2 text-white shadow-lg hover:-translate-y-1 transition-transform"
-                    >
-                      <VerifyBtn title="Mark Ready" /> Mark as Ready
+                    <button onClick={() => updateStatus(order._id, 'Ready')} className="btn btn-primary btn-sm w-full gap-2 text-white shadow-lg">
+                      <CheckCircle size={14} /> Mark Ready
                     </button>
                   ) : order.status === 'Ready' ? (
-                    <div className="alert alert-success py-2 text-xs font-bold flex justify-center">
-                      Ready for Pickup
-                    </div>
+                    <div className="alert alert-success py-2 text-xs font-bold flex justify-center text-white"><Truck size={14} className="mr-2"/> Ready for Pickup</div>
                   ) : (
-                    <div className="alert alert-ghost py-2 text-xs flex justify-center">
-                      {order.status}
-                    </div>
+                    <button className="btn btn-disabled btn-sm w-full">Completed</button>
                   )}
                 </div>
               </div>

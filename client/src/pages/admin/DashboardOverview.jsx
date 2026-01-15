@@ -21,7 +21,7 @@ const DashboardOverview = () => {
         const products = prodRes.data || [];
         const orders = ordRes.data || [];
         
-        // Calculate Stats
+        // Stats Logic
         const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
         const today = new Date().toDateString();
         const todayCount = orders.filter(o => new Date(o.timestamp).toDateString() === today).length;
@@ -44,11 +44,14 @@ const DashboardOverview = () => {
     fetchData();
   }, []);
 
-  if (loading) return <div className="p-10 flex justify-center"><span className="loading loading-spinner text-primary"></span></div>;
+  if (loading) return <div className="p-12 flex justify-center"><span className="loading loading-spinner loading-lg text-primary"></span></div>;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+      <div className="mb-2">
+        <h1 className="text-2xl font-bold text-gray-800">Dashboard Overview</h1>
+        <p className="text-gray-500 text-sm">Welcome back, Admin. Here is what's happening today.</p>
+      </div>
       
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -59,13 +62,13 @@ const DashboardOverview = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders */}
+        {/* Recent Orders Widget */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <h3 className="font-bold text-gray-800">Recent Orders</h3>
           </div>
           <table className="table w-full">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
               <tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th></tr>
             </thead>
             <tbody>
@@ -84,18 +87,18 @@ const DashboardOverview = () => {
           </table>
         </div>
 
-        {/* Top Inventory */}
+        {/* Top Inventory Widget */}
         <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 border-b border-gray-100 bg-gray-50/50"><h3 className="font-bold text-gray-800">Top Inventory</h3></div>
           <div className="p-4 space-y-4">
             {topProducts.map(product => (
-              <div key={product._id} className="flex items-center gap-3">
+              <div key={product._id} className="flex items-center gap-3 p-1 hover:bg-gray-50 rounded-lg transition-colors">
                 <img src={product.image} className="w-10 h-10 rounded-lg object-cover bg-gray-100 border border-gray-200" onError={(e)=>e.target.src='https://via.placeholder.com/40'}/>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-gray-800 truncate">{product.title}</p>
                   <p className="text-xs text-gray-500">{product.category}</p>
                 </div>
-                <p className="text-xs font-bold text-primary">KES {Number(product.price).toLocaleString()}</p>
+                <p className="text-xs font-bold text-primary bg-primary/5 px-2 py-1 rounded">KES {Number(product.price).toLocaleString()}</p>
               </div>
             ))}
           </div>

@@ -4,7 +4,9 @@ import { Truck, Package, LogOut, Menu, X, Settings, Box } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
 const SupplierLayout = () => {
-  const [isSidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile
+  // Mobile Sidebar State
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
   const logout = useAuthStore((state) => state.logout);
@@ -26,16 +28,16 @@ const SupplierLayout = () => {
         ></div>
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - RESTORED ORIGINAL STYLING + Mobile Logic */}
       <aside 
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white transition-transform duration-300 ease-in-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:relative md:translate-x-0 flex flex-col shadow-xl`}
       >
         <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 bg-slate-950/30">
-          <span className="text-xl font-bold tracking-tight">Vesto<span className="text-teal-400">Partner</span></span>
+          <span className="text-xl font-bold tracking-tight">Vesto<span className="text-secondary">Partner</span></span>
           <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-400 hover:text-white">
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
@@ -45,15 +47,15 @@ const SupplierLayout = () => {
               key={item.path}
               onClick={() => {
                 navigate(item.path);
-                setSidebarOpen(false);
+                setSidebarOpen(false); // Close on click (mobile)
               }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 location.pathname === item.path 
-                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-900/20' 
-                  : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                  ? 'bg-secondary text-white shadow-lg' 
+                  : 'hover:bg-white/10 text-slate-400 hover:text-white'
               }`}
             >
-              <item.icon size={20} className={location.pathname === item.path ? 'text-white' : 'text-slate-500 group-hover:text-white'} />
+              <item.icon size={20} />
               <span className="font-medium">{item.title}</span>
             </button>
           ))}
@@ -62,16 +64,17 @@ const SupplierLayout = () => {
         <div className="p-4 border-t border-white/10 bg-slate-950/30">
           <button 
             onClick={logout}
-            className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors w-full px-4 py-2 hover:bg-red-500/10 rounded-lg"
+            className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors w-full px-4 py-2 hover:bg-white/5 rounded-lg"
           >
             <LogOut size={20} />
-            <span className="font-medium">Logout</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden w-full">
+        {/* Header - RESTORED BRANDING */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 shrink-0">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-600 p-2 -ml-2">
             <Menu size={24} />
@@ -82,7 +85,7 @@ const SupplierLayout = () => {
               <p className="text-sm font-bold text-gray-800">Nike Distributor LTD</p>
               <p className="text-xs text-gray-500">Supplier ID: #SUP-882</p>
             </div>
-            <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-full flex items-center justify-center font-bold border border-teal-100 shadow-sm">
+            <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center text-secondary font-bold border border-secondary/20">
               ND
             </div>
           </div>

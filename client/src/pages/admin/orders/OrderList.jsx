@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../../utils/api';
 import { Filter, RefreshCw, Calendar, Search } from 'lucide-react';
 import StatusBadge from '../../../components/common/StatusBadge';
 
@@ -12,7 +12,7 @@ const OrderList = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/admin/orders');
+      const res = await api.get('/admin/orders');
       setOrders(res.data);
     } catch (err) { console.error(err); } 
     finally { setLoading(false); }

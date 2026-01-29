@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Package, ShoppingBag, DollarSign, TrendingUp } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -14,8 +14,8 @@ const DashboardOverview = () => {
     const fetchData = async () => {
       try {
         const [prodRes, ordRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/products'),
-          axios.get('http://localhost:5000/api/admin/orders')
+          api.get('/products'),
+          api.get('/admin/orders')
         ]);
         
         const products = prodRes.data || [];

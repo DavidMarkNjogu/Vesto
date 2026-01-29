@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Search, Filter, Box, MapPin, Phone, CheckCircle, Clock, Truck } from 'lucide-react';
 
 const MyShipments = () => {
@@ -10,7 +10,7 @@ const MyShipments = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/supplier/orders');
+      const res = await api.get('/supplier/orders');
       if (Array.isArray(res.data)) setOrders(res.data);
     } catch (err) { console.error("Failed to load shipments", err); } 
     finally { setLoading(false); }

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { 
   Package, ShoppingBag, DollarSign, TrendingUp, 
   Plus, Edit, Trash2, X, Upload, Image as ImageIcon, 
@@ -54,8 +54,8 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const [productsRes, ordersRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/products'),
-        axios.get('http://localhost:5000/api/admin/orders')
+        api.get('/products'),
+        api.get('/admin/orders')
       ]);
       
       const prodData = productsRes.data || [];
@@ -641,8 +641,8 @@ export default Dashboard;
 // //     setLoading(true);
 // //     try {
 // //       const [productsRes, ordersRes] = await Promise.all([
-// //         axios.get('http://localhost:5000/api/products'),
-// //         axios.get('http://localhost:5000/api/admin/orders') // Ensure this route exists in server
+// //         api.get('/products'),
+// //         api.get('/admin/orders') // Ensure this route exists in server
 // //       ]);
       
 // //       const prodData = productsRes.data || [];
@@ -1278,8 +1278,8 @@ export default Dashboard;
 //   const fetchDashboardData = async () => {
 //     try {
 //       const [productsRes, ordersRes] = await Promise.all([
-//         axios.get('http://localhost:5000/api/products'),
-//         axios.get('http://localhost:5000/api/admin/orders')
+//         api.get('/products'),
+//         api.get('/admin/orders')
 //       ]);
       
 //       setProducts(productsRes.data);

@@ -23,7 +23,7 @@
 //   const fetchData = async () => {
 //     setRefreshing(true);
 //     try {
-//       const res = await axios.get('http://localhost:5000/api/supplier/orders');
+//       const res = await api.get('/supplier/orders');
 //       if (Array.isArray(res.data)) {
 //         const allOrders = res.data;
 //         setOrders(allOrders);
@@ -268,7 +268,7 @@
 
 // export default SupplierDashboard;
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { 
   Package, Clock, CheckCircle, TrendingUp, AlertCircle, 
   Loader, Printer, RefreshCw, DollarSign, Activity 
@@ -292,7 +292,7 @@ const SupplierDashboard = () => {
   const fetchData = async () => {
     setRefreshing(true);
     try {
-      const res = await axios.get('http://localhost:5000/api/supplier/orders');
+      const res = await api.get('/supplier/orders');
       if (Array.isArray(res.data)) {
         const allOrders = res.data;
         setOrders(allOrders);

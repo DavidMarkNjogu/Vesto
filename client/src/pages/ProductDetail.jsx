@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import useCartStore from '../store/cartStore';
 import { ArrowLeft, ShoppingCart, Heart, Star, Check, X, Ruler, Plus, Minus } from 'lucide-react';
 import { offlineDB } from '../utils/offlineDB';

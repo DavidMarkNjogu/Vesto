@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { Package, Search, Plus, Save, Edit2, Trash2 } from 'lucide-react';
 
 // COMPONENTS (Ensure these exist in client/src/components/common)
@@ -28,7 +28,7 @@ const SupplierProducts = () => {
   const fetchProducts = async () => {
     try {
       // Replace with your real API endpoint if needed
-      const res = await axios.get('http://localhost:5000/api/products');
+      const res = await api.get('/products');
       setProducts(res.data);
     } catch (err) {
       console.error(err);

@@ -120,9 +120,9 @@ const Dashboard = () => {
     };
 
     if (editingProduct) {
-      await axios.put(`http://localhost:5000/api/admin/products/${editingProduct._id}`, formData);
+      await api.put(`/admin/products/${editingProduct._id}`, formData);
     } else {
-      await axios.post('http://localhost:5000/api/admin/products', formData);
+      await api.post('/admin/products', formData);
     }
     
     closeForm();
@@ -160,7 +160,7 @@ const Dashboard = () => {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/admin/products/${deleteModal.productId}`);
+      await api.delete(`/products/${deleteModal.productId}`);
       setDeleteModal({ isOpen: false, productId: null });
       fetchDashboardData();
       setSuccessModal({ isOpen: true, title: 'Product Deleted', message: 'The product has been removed from inventory.' });

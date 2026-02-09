@@ -45,7 +45,7 @@ const SupplierProducts = () => {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/admin/products/${selectedProduct._id}`);
+      await api.delete(`/admin/products/${selectedProduct._id}`);
       setProducts(prev => prev.filter(p => p._id !== selectedProduct._id));
       setIsDeleteModalOpen(false);
     } catch (error) {

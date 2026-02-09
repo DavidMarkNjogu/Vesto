@@ -84,7 +84,7 @@ const Checkout = () => {
 
       if (isOnline()) {
         // Online Flow: Hit the API
-        const response = await axios.post('http://localhost:5000/api/orders', payload);
+        const response = await api.post('/orders', payload);
         responseData = response.data;
       } else {
         // Offline Flow: Save to IndexedDB

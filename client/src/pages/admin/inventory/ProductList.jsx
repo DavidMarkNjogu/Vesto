@@ -75,9 +75,9 @@ const ProductList = () => {
     };
 
     if (editingProduct) {
-      await axios.put(`http://localhost:5000/api/admin/products/${editingProduct._id}`, formData);
+      await api.put(`/admin/products/${editingProduct._id}`, formData);
     } else {
-      await axios.post('http://localhost:5000/api/admin/products', formData);
+      await api.post('/admin/products', formData);
     }
     
     closeForm();
@@ -101,7 +101,7 @@ const ProductList = () => {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/admin/products/${deleteModal.productId}`);
+      await api.delete(`/admin/products/${deleteModal.productId}`);
       setDeleteModal({ isOpen: false, productId: null });
       fetchProducts();
       setSuccessModal({ isOpen: true, title: 'Deleted', message: 'Product removed from inventory.' });

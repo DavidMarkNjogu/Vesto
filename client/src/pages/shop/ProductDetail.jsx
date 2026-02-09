@@ -29,7 +29,7 @@ const ProductDetail = () => {
       try {
         let data;
         if (isOnline()) {
-          const res = await axios.get(`http://localhost:5000/api/products/${id}`).catch(() => null);
+          const res = await api.get(`/products/${id}`).catch(() => null);
           data = res?.data;
         } 
         if (!data) data = await offlineDB.getProduct(id);

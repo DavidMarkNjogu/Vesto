@@ -19,7 +19,7 @@ const MyShipments = () => {
   const updateStatus = async (orderId, newStatus) => {
     try {
       setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
-      await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, { status: newStatus });
+      await api.put(`/orders/${orderId}/status`, { status: newStatus });
     } catch (err) {
       console.error("Update failed", err);
       fetchOrders();

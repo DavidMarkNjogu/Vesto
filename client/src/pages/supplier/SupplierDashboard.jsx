@@ -327,7 +327,7 @@ const SupplierDashboard = () => {
     try {
       setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: 'Ready' } : o));
       calculateStats(orders.map(o => o._id === orderId ? { ...o, status: 'Ready' } : o));
-      await axios.put(`http://localhost:5000/api/orders/${orderId}/status`, { status: 'Ready' });
+      await api.put(`/orders/${orderId}/status`, { status: 'Ready' });
     } catch (err) {
       console.error("Failed to update status", err);
       fetchData(); 

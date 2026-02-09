@@ -5,16 +5,17 @@ import api from '../utils/api';
 const useAuthStore = create(
   persist(
     (set) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      loading: false,
-      error: null,
+      user: JSON.parse(localStorage.getItem('vesto_user')) || null,
+      // user: null,
+      // token: null,
+      // isAuthenticated: false,
+      // loading: false,
+      // error: null,
 
       login: async (email, password) => {
         set({ loading: true, error: null });
         try {
-          const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+          const res = await api.post('/auth/login', { email, password });
           
           if (res.data.success) {
             set({ 

@@ -1,61 +1,69 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
+import { motion } from 'framer-motion';
 import useCartStore from '../../store/cartStore';
-import { ArrowLeft, ShoppingCart, CheckCircle, Ruler, Plus, Minus, X, Footprints } from 'lucide-react';
-import { offlineDB } from '../../utils/offlineDB';
+import api from '../../utils/api';
+import { 
+  ChevronLeft, ShoppingCart, Star, Truck, Shield, 
+  RotateCcw, Ruler, Image as ImageIcon 
+} from 'lucide-react';
 import { isOnline } from '../../utils/offlineSync';
+import { OfflineDB } from '../../utils/offlineDB';
+const db = new OfflineDB();
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCartStore();
   
-  // --- STATE ---
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   
+  // Selection States
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  
+  const [qty, setQty] = useState(1);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showAddedToast, setShowAddedToast] = useState(false);
 
-  // --- INIT ---
   useEffect(() => {
     const fetchData = async () => {
       try {
         let data;
+        // Try Online First
         if (isOnline()) {
           const res = await api.get(`/products/${id}`).catch(() => null);
           data = res?.data;
-        } 
-        if (!data) data = await offlineDB.getProduct(id);
+        }
+        // Fallback to Offline DB
+        if (!data) data = await db.getProduct(id);
         
         setProduct(data);
         
+        // Auto-select defaults
         if (data) {
           if (data.variants?.length > 0) {
-            const first = data.variants.find(v => v.stock > 0) || data.variants[0];
-            setSelectedColor(first.color);
+            const v = data.variants.find(v => v.stock > 0) || data.variants[0];
+            setSelectedColor(v.color);
           } else if (data.colors?.length > 0) {
-            setSelectedColor(data.colors[0]?.name || data.colors[0]);
+            setSelectedColor(data.colors[0].name || data.colors[0]);
           }
         }
-      } catch (err) { console.error(err); } 
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
     window.scrollTo(0, 0);
   }, [id]);
 
-  // --- DERIVED STATE ---
-  const images = useMemo(() => {
+  // Logic Helpers (Memoized)
+  const productImages = useMemo(() => {
     if (!product) return [];
-    if (product.images?.length > 0) return product.images;
-    return [product.image];
+    return product.images?.length > 0 ? product.images : [product.image];
   }, [product]);
 
   const availableColors = useMemo(() => {
@@ -69,7 +77,8 @@ const ProductDetail = () => {
     if (product.variants && selectedColor) {
       return product.variants
         .filter(v => v.color === selectedColor)
-        .sort((a, b) => Number(a.size) - Number(b.size));
+        .sort((a, b) => Number(a.size) - Number(b.size))
+        .map(v => v.size); // Just return the size string for simplicity
     }
     return product.sizes ? Object.keys(product.sizes) : ['39', '40', '41', '42', '43', '44'];
   }, [product, selectedColor]);
@@ -79,90 +88,117 @@ const ProductDetail = () => {
     return product.variants.find(v => v.size === selectedSize && v.color === selectedColor);
   }, [product, selectedSize, selectedColor]);
 
-  const getButtonTooltip = () => {
-    if (!selectedSize) return "Please select a size first";
-    if (currentVariant && currentVariant.stock === 0) return "Out of stock";
-    return "";
-  };
-
-  // --- HANDLER (FIXED) ---
+  // Handlers
   const handleAddToCart = () => {
     if (!selectedSize) return;
-    
-    // Safety check for size type
-    if (typeof selectedSize === 'object') {
-        console.error("Critical Error: Object detected in size selection");
-        return;
-    }
 
-    const item = {
+    const cartItem = {
       id: currentVariant ? currentVariant.sku : `${product._id}-${selectedSize}-${selectedColor}`,
       productId: product._id,
-      sku: currentVariant?.sku,
       title: product.title,
       price: currentVariant?.priceOverride || product.price,
-      image: images[selectedImageIndex] || images[0],
-      selectedSize, // This is now guaranteed to be a string
+      image: productImages[currentImageIndex] || productImages[0],
+      selectedSize,
       selectedColor,
-      quantity
+      quantity: qty
     };
-    addItem(item);
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 3000);
+
+    addItem(cartItem);
+    setShowAddedToast(true);
+    setTimeout(() => setShowAddedToast(false), 3000);
   };
 
-  if (loading) return <div className="min-h-screen flex justify-center items-center"><span className="loading loading-spinner text-primary"></span></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><span className="loading loading-spinner loading-lg text-primary"></span></div>;
   if (!product) return <div className="p-10 text-center">Product not found</div>;
 
-  const price = currentVariant?.priceOverride || product.price;
+  const displayPrice = currentVariant?.priceOverride || product.price;
 
   return (
     <div className="min-h-screen bg-white pb-24 md:pb-10 relative">
-      {/* 1. Mobile Header */}
+      
+      {/* Mobile Back Header */}
       <div className="md:hidden sticky top-0 bg-white/90 backdrop-blur z-30 px-4 py-3 flex items-center justify-between border-b border-gray-100">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600"><ArrowLeft /></button>
-        <span className="font-bold text-gray-800 truncate">{product.title}</span>
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600"><ChevronLeft /></button>
+        <span className="font-bold text-gray-800 truncate max-w-[200px]">{product.title}</span>
         <button onClick={() => navigate('/cart')} className="p-2 text-primary"><ShoppingCart /></button>
       </div>
 
-      <div className="container mx-auto px-0 md:px-4 py-0 md:py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="container mx-auto px-0 md:px-6 py-0 md:py-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-16">
           
-          {/* 2. Gallery */}
-          <div className="bg-gray-50 md:bg-transparent">
-            <div className="relative aspect-square md:rounded-2xl overflow-hidden">
-              <img src={images[selectedImageIndex] || images[0]} className="w-full h-full object-cover" />
-              <div className="absolute bottom-4 right-4 bg-white/90 px-3 py-1 rounded-full text-xs font-bold">
-                {selectedImageIndex + 1} / {images.length}
+          {/* Left: Gallery (Sticky on Desktop) */}
+          <div className="relative">
+            <div className="md:sticky md:top-24 space-y-4">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="aspect-square bg-gray-100 md:rounded-3xl overflow-hidden relative"
+              >
+                <motion.img 
+                  key={currentImageIndex} // Triggers animation on change
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
+                  src={productImages[currentImageIndex]} 
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Floating Navigation Pills */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/20 backdrop-blur-md p-1 rounded-full">
+                  {productImages.map((_, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`w-2 h-2 rounded-full transition-all ${currentImageIndex === idx ? 'bg-white w-4' : 'bg-white/50 hover:bg-white/80'}`}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Thumbnails (Desktop Only) */}
+              <div className="hidden md:flex gap-3 overflow-x-auto pb-2">
+                {productImages.map((img, idx) => (
+                  <button 
+                    key={idx} 
+                    onClick={() => setCurrentImageIndex(idx)}
+                    className={`w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${currentImageIndex === idx ? 'border-gray-900 scale-95' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                  >
+                    <img src={img} className="w-full h-full object-cover" />
+                  </button>
+                ))}
               </div>
-            </div>
-            <div className="flex gap-2 overflow-x-auto p-4 md:px-0">
-              {images.map((img, idx) => (
-                <button key={idx} onClick={() => setSelectedImageIndex(idx)} className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${selectedImageIndex === idx ? 'border-primary' : 'border-transparent'}`}>
-                  <img src={img} className="w-full h-full object-cover" />
-                </button>
-              ))}
             </div>
           </div>
 
-          {/* 3. Details */}
-          <div className="px-4 space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{product.title}</h1>
-              <p className="text-2xl font-bold text-primary mt-1">KES {price.toLocaleString()}</p>
-              <p className="text-gray-500 mt-4 text-sm">{product.description}</p>
+          {/* Right: Details (Scrollable) */}
+          <div className="px-5 md:px-0 mt-6 md:mt-0">
+            <div className="mb-6">
+              <h1 className="text-3xl md:text-5xl font-black text-gray-900 tracking-tight mb-2 leading-[0.9]">
+                {product.title}
+              </h1>
+              <div className="flex items-center gap-4 mb-4">
+                <span className="text-2xl font-bold text-gray-900">
+                  KES {Number(displayPrice).toLocaleString()}
+                </span>
+                {product.rating && (
+                  <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-md">
+                    <Star size={14} className="fill-yellow-400 text-yellow-400" />
+                    <span className="text-xs font-bold text-yellow-700">{product.rating} (124 Reviews)</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-gray-500 leading-relaxed">{product.description}</p>
             </div>
 
             {/* Selectors */}
-            <div className="space-y-4">
+            <div className="space-y-8 border-t border-gray-100 pt-8">
+              
+              {/* Color */}
               <div>
-                <span className="font-bold text-sm uppercase">Color</span>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Select Color</span>
+                <div className="flex flex-wrap gap-3 mt-3">
                   {availableColors.map(color => (
-                    <button 
-                      key={color} 
+                    <button
+                      key={color}
                       onClick={() => { setSelectedColor(color); setSelectedSize(null); }}
-                      className={`px-4 py-2 border rounded-lg text-sm ${selectedColor === color ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200'}`}
+                      className={`px-6 py-2 rounded-full text-sm font-bold border transition-all ${selectedColor === color ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
                     >
                       {color}
                     </button>
@@ -170,127 +206,389 @@ const ProductDetail = () => {
                 </div>
               </div>
 
+              {/* Size */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-sm uppercase">Size</span>
-                  <button type="button" onClick={() => setShowSizeGuide(true)} className="text-xs text-primary underline flex items-center gap-1 cursor-pointer">
-                    <Ruler size={14} /> Size Guide
-                  </button>
+                <div className="flex justify-between items-center mb-3">
+                   <span className="text-xs font-bold text-gray-900 uppercase tracking-widest">Select Size</span>
+                   <button className="text-xs text-primary underline flex items-center gap-1 font-medium">
+                     <Ruler size={14}/> Size Guide
+                   </button>
                 </div>
-                
-                {/* --- FIX: SIZE SELECTOR LOOP --- */}
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-4 gap-3">
                   {availableSizes.map(size => {
-                    // Extract safe string value
-                    const sizeValue = typeof size === 'object' ? size.size : size;
-                    const stock = typeof size === 'object' ? size.stock : 99;
-                    const isDisabled = stock === 0;
+                    const variant = product.variants?.find(v => v.size === size && v.color === selectedColor);
+                    const isOutOfStock = variant && variant.stock === 0;
 
                     return (
-                        <button 
-                        key={sizeValue}
-                        onClick={() => setSelectedSize(sizeValue)} // Pass string only
-                        disabled={isDisabled}
-                        className={`py-2 border rounded-lg text-sm font-bold transition-colors ${
-                            selectedSize === sizeValue 
-                            ? 'bg-gray-900 text-white border-gray-900' 
-                            : isDisabled
-                                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
-                                : 'border-gray-200 hover:border-gray-400 text-gray-700'
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        disabled={isOutOfStock}
+                        className={`h-12 rounded-xl text-sm font-bold border transition-all ${
+                          selectedSize === size 
+                            ? 'bg-gray-900 text-white border-gray-900 ring-2 ring-gray-900 ring-offset-2' 
+                            : isOutOfStock 
+                              ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed decoration-slice line-through' 
+                              : 'bg-white text-gray-800 border-gray-200 hover:border-gray-900'
                         }`}
-                        >
-                        {sizeValue}
-                        </button>
-                    );
+                      >
+                        {size}
+                      </button>
+                    )
                   })}
                 </div>
               </div>
-            </div>
 
-            {/* Desktop Add to Cart */}
-            <div className="hidden md:flex gap-4 pt-4 border-t">
-              <div className={`flex-1 ${!selectedSize ? 'tooltip tooltip-open tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
-                <button onClick={handleAddToCart} disabled={!selectedSize} className="w-full btn btn-primary btn-lg text-white shadow-lg">
-                  Add to Cart
+              {/* Add to Cart Actions */}
+              <div className="flex gap-4 pt-4">
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={!selectedSize}
+                  className="flex-1 btn btn-primary h-14 rounded-full text-lg font-bold text-white shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:shadow-none transition-all"
+                >
+                  {selectedSize ? `Add to Cart - KES ${(displayPrice * qty).toLocaleString()}` : 'Select Size'}
+                </button>
+                <button className="btn btn-circle btn-ghost border border-gray-200 h-14 w-14">
+                  <Star size={20} />
                 </button>
               </div>
+
+              {/* Value Props */}
+              <div className="grid grid-cols-2 gap-4 pt-6">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <Truck className="text-gray-400" size={20}/>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900">Free Delivery</p>
+                    <p className="text-[10px] text-gray-500">On orders over KES 5k</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                  <RotateCcw className="text-gray-400" size={20}/>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900">Easy Returns</p>
+                    <p className="text-[10px] text-gray-500">7 Days change of mind</p>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
       </div>
-
-      {/* 4. Mobile Sticky Footer */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t p-4 z-20 pb-safe">
-        <div className={`w-full ${!selectedSize ? 'tooltip tooltip-top tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
-           <button onClick={handleAddToCart} disabled={!selectedSize} className="w-full btn btn-primary text-white shadow-lg">
-             {selectedSize ? `Add - KES ${(price * quantity).toLocaleString()}` : 'Select Size'}
-           </button>
-        </div>
-      </div>
-
-      {/* 5. SIZE GUIDE MODAL */}
-      {showSizeGuide && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-              <h3 className="font-bold text-lg flex items-center gap-2"><Ruler className="text-primary"/> Size Guide</h3>
-              <button onClick={() => setShowSizeGuide(false)} className="btn btn-sm btn-circle btn-ghost"><X size={20}/></button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-                <div className="p-6 border-b border-gray-100 bg-blue-50/30">
-                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Footprints size={18} className="text-primary"/> How to Measure</h4>
-                    <ol className="list-decimal list-inside text-sm text-gray-600 space-y-2 ml-1">
-                        <li>Place a piece of paper on the floor against a wall.</li>
-                        <li>Stand on the paper with your heel firmly against the wall.</li>
-                        <li>Mark the longest part of your foot (usually the big toe).</li>
-                        <li>Measure the distance from the edge of the paper to the mark in <strong>cm</strong>.</li>
-                    </ol>
-                </div>
-                <div className="p-0">
-                    <table className="table w-full text-center">
-                        <thead className="bg-gray-100 sticky top-0">
-                            <tr><th>EU</th><th>UK</th><th>US (M)</th><th>CM</th></tr>
-                        </thead>
-                        <tbody className="text-sm">
-                            {[
-                            {eu:'39', uk:'6', us:'7', cm:'24.5'},
-                            {eu:'40', uk:'6.5', us:'7.5', cm:'25.0'},
-                            {eu:'41', uk:'7.5', us:'8.5', cm:'26.0'},
-                            {eu:'42', uk:'8', us:'9', cm:'26.5'},
-                            {eu:'43', uk:'9', us:'10', cm:'27.5'},
-                            {eu:'44', uk:'9.5', us:'10.5', cm:'28.0'},
-                            {eu:'45', uk:'10.5', us:'11.5', cm:'29.0'},
-                            ].map(r => (
-                                <tr key={r.eu} className={selectedSize === r.eu ? 'bg-primary/10 font-bold border-l-4 border-primary' : 'hover:bg-gray-50'}>
-                                    <td className="py-3">{r.eu}</td><td>{r.uk}</td><td>{r.us}</td><td className="font-mono">{r.cm}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div className="p-4 border-t bg-white">
-               <button className="btn btn-primary btn-block text-white" onClick={() => setShowSizeGuide(false)}>Close Guide</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Success Toast */}
-      {showSuccessToast && (
-        <div className="fixed top-24 right-4 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-bounce-in">
-          <div className="flex items-center gap-3">
-             <CheckCircle className="text-green-500" />
-             <div><p className="font-bold">Added to Cart</p></div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showAddedToast && (
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center gap-3"
+          >
+            <div className="bg-green-500 rounded-full p-1"><Star size={12} className="text-white fill-white"/></div>
+            <span className="font-bold text-sm">Added to Cart</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 export default ProductDetail;
+
+// import { useState, useEffect, useMemo } from 'react';
+// import { useParams, useNavigate } from 'react-router-dom';
+// import api from '../../utils/api';
+// import useCartStore from '../../store/cartStore';
+// import { ArrowLeft, ShoppingCart, CheckCircle, Ruler, Plus, Minus, X, Footprints } from 'lucide-react';
+// import { offlineDB } from '../../utils/offlineDB';
+// import { isOnline } from '../../utils/offlineSync';
+
+// const ProductDetail = () => {
+//   const { id } = useParams();
+//   const navigate = useNavigate();
+//   const { addItem } = useCartStore();
+  
+//   // --- STATE ---
+//   const [product, setProduct] = useState(null);
+//   const [loading, setLoading] = useState(true);
+  
+//   const [selectedSize, setSelectedSize] = useState(null);
+//   const [selectedColor, setSelectedColor] = useState(null);
+//   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+//   const [quantity, setQuantity] = useState(1);
+  
+//   const [showSizeGuide, setShowSizeGuide] = useState(false);
+//   const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+//   // --- INIT ---
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       try {
+//         let data;
+//         if (isOnline()) {
+//           const res = await api.get(`/products/${id}`).catch(() => null);
+//           data = res?.data;
+//         } 
+//         if (!data) data = await offlineDB.getProduct(id);
+        
+//         setProduct(data);
+        
+//         if (data) {
+//           if (data.variants?.length > 0) {
+//             const first = data.variants.find(v => v.stock > 0) || data.variants[0];
+//             setSelectedColor(first.color);
+//           } else if (data.colors?.length > 0) {
+//             setSelectedColor(data.colors[0]?.name || data.colors[0]);
+//           }
+//         }
+//       } catch (err) { console.error(err); } 
+//       finally { setLoading(false); }
+//     };
+//     fetchData();
+//     window.scrollTo(0, 0);
+//   }, [id]);
+
+//   // --- DERIVED STATE ---
+//   const images = useMemo(() => {
+//     if (!product) return [];
+//     if (product.images?.length > 0) return product.images;
+//     return [product.image];
+//   }, [product]);
+
+//   const availableColors = useMemo(() => {
+//     if (!product) return [];
+//     if (product.variants) return [...new Set(product.variants.map(v => v.color))];
+//     return product.colors?.map(c => c.name || c) || [];
+//   }, [product]);
+
+//   const availableSizes = useMemo(() => {
+//     if (!product) return [];
+//     if (product.variants && selectedColor) {
+//       return product.variants
+//         .filter(v => v.color === selectedColor)
+//         .sort((a, b) => Number(a.size) - Number(b.size));
+//     }
+//     return product.sizes ? Object.keys(product.sizes) : ['39', '40', '41', '42', '43', '44'];
+//   }, [product, selectedColor]);
+
+//   const currentVariant = useMemo(() => {
+//     if (!product?.variants) return null;
+//     return product.variants.find(v => v.size === selectedSize && v.color === selectedColor);
+//   }, [product, selectedSize, selectedColor]);
+
+//   const getButtonTooltip = () => {
+//     if (!selectedSize) return "Please select a size first";
+//     if (currentVariant && currentVariant.stock === 0) return "Out of stock";
+//     return "";
+//   };
+
+//   // --- HANDLER (FIXED) ---
+//   const handleAddToCart = () => {
+//     if (!selectedSize) return;
+    
+//     // Safety check for size type
+//     if (typeof selectedSize === 'object') {
+//         console.error("Critical Error: Object detected in size selection");
+//         return;
+//     }
+
+//     const item = {
+//       id: currentVariant ? currentVariant.sku : `${product._id}-${selectedSize}-${selectedColor}`,
+//       productId: product._id,
+//       sku: currentVariant?.sku,
+//       title: product.title,
+//       price: currentVariant?.priceOverride || product.price,
+//       image: images[selectedImageIndex] || images[0],
+//       selectedSize, // This is now guaranteed to be a string
+//       selectedColor,
+//       quantity
+//     };
+//     addItem(item);
+//     setShowSuccessToast(true);
+//     setTimeout(() => setShowSuccessToast(false), 3000);
+//   };
+
+//   if (loading) return <div className="min-h-screen flex justify-center items-center"><span className="loading loading-spinner text-primary"></span></div>;
+//   if (!product) return <div className="p-10 text-center">Product not found</div>;
+
+//   const price = currentVariant?.priceOverride || product.price;
+
+//   return (
+//     <div className="min-h-screen bg-white pb-24 md:pb-10 relative">
+//       {/* 1. Mobile Header */}
+//       <div className="md:hidden sticky top-0 bg-white/90 backdrop-blur z-30 px-4 py-3 flex items-center justify-between border-b border-gray-100">
+//         <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600"><ArrowLeft /></button>
+//         <span className="font-bold text-gray-800 truncate">{product.title}</span>
+//         <button onClick={() => navigate('/cart')} className="p-2 text-primary"><ShoppingCart /></button>
+//       </div>
+
+//       <div className="container mx-auto px-0 md:px-4 py-0 md:py-8">
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+//           {/* 2. Gallery */}
+//           <div className="bg-gray-50 md:bg-transparent">
+//             <div className="relative aspect-square md:rounded-2xl overflow-hidden">
+//               <img src={images[selectedImageIndex] || images[0]} className="w-full h-full object-cover" />
+//               <div className="absolute bottom-4 right-4 bg-white/90 px-3 py-1 rounded-full text-xs font-bold">
+//                 {selectedImageIndex + 1} / {images.length}
+//               </div>
+//             </div>
+//             <div className="flex gap-2 overflow-x-auto p-4 md:px-0">
+//               {images.map((img, idx) => (
+//                 <button key={idx} onClick={() => setSelectedImageIndex(idx)} className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 ${selectedImageIndex === idx ? 'border-primary' : 'border-transparent'}`}>
+//                   <img src={img} className="w-full h-full object-cover" />
+//                 </button>
+//               ))}
+//             </div>
+//           </div>
+
+//           {/* 3. Details */}
+//           <div className="px-4 space-y-6">
+//             <div>
+//               <h1 className="text-3xl font-bold text-gray-900">{product.title}</h1>
+//               <p className="text-2xl font-bold text-primary mt-1">KES {price.toLocaleString()}</p>
+//               <p className="text-gray-500 mt-4 text-sm">{product.description}</p>
+//             </div>
+
+//             {/* Selectors */}
+//             <div className="space-y-4">
+//               <div>
+//                 <span className="font-bold text-sm uppercase">Color</span>
+//                 <div className="flex flex-wrap gap-2 mt-2">
+//                   {availableColors.map(color => (
+//                     <button 
+//                       key={color} 
+//                       onClick={() => { setSelectedColor(color); setSelectedSize(null); }}
+//                       className={`px-4 py-2 border rounded-lg text-sm ${selectedColor === color ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200'}`}
+//                     >
+//                       {color}
+//                     </button>
+//                   ))}
+//                 </div>
+//               </div>
+
+//               <div>
+//                 <div className="flex justify-between items-center mb-2">
+//                   <span className="font-bold text-sm uppercase">Size</span>
+//                   <button type="button" onClick={() => setShowSizeGuide(true)} className="text-xs text-primary underline flex items-center gap-1 cursor-pointer">
+//                     <Ruler size={14} /> Size Guide
+//                   </button>
+//                 </div>
+                
+//                 {/* --- FIX: SIZE SELECTOR LOOP --- */}
+//                 <div className="grid grid-cols-5 gap-2">
+//                   {availableSizes.map(size => {
+//                     // Extract safe string value
+//                     const sizeValue = typeof size === 'object' ? size.size : size;
+//                     const stock = typeof size === 'object' ? size.stock : 99;
+//                     const isDisabled = stock === 0;
+
+//                     return (
+//                         <button 
+//                         key={sizeValue}
+//                         onClick={() => setSelectedSize(sizeValue)} // Pass string only
+//                         disabled={isDisabled}
+//                         className={`py-2 border rounded-lg text-sm font-bold transition-colors ${
+//                             selectedSize === sizeValue 
+//                             ? 'bg-gray-900 text-white border-gray-900' 
+//                             : isDisabled
+//                                 ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+//                                 : 'border-gray-200 hover:border-gray-400 text-gray-700'
+//                         }`}
+//                         >
+//                         {sizeValue}
+//                         </button>
+//                     );
+//                   })}
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Desktop Add to Cart */}
+//             <div className="hidden md:flex gap-4 pt-4 border-t">
+//               <div className={`flex-1 ${!selectedSize ? 'tooltip tooltip-open tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
+//                 <button onClick={handleAddToCart} disabled={!selectedSize} className="w-full btn btn-primary btn-lg text-white shadow-lg">
+//                   Add to Cart
+//                 </button>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* 4. Mobile Sticky Footer */}
+//       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t p-4 z-20 pb-safe">
+//         <div className={`w-full ${!selectedSize ? 'tooltip tooltip-top tooltip-primary' : ''}`} data-tip={getButtonTooltip()}>
+//            <button onClick={handleAddToCart} disabled={!selectedSize} className="w-full btn btn-primary text-white shadow-lg">
+//              {selectedSize ? `Add - KES ${(price * quantity).toLocaleString()}` : 'Select Size'}
+//            </button>
+//         </div>
+//       </div>
+
+//       {/* 5. SIZE GUIDE MODAL */}
+//       {showSizeGuide && (
+//         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+//           <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+//             <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+//               <h3 className="font-bold text-lg flex items-center gap-2"><Ruler className="text-primary"/> Size Guide</h3>
+//               <button onClick={() => setShowSizeGuide(false)} className="btn btn-sm btn-circle btn-ghost"><X size={20}/></button>
+//             </div>
+            
+//             <div className="flex-1 overflow-y-auto">
+//                 <div className="p-6 border-b border-gray-100 bg-blue-50/30">
+//                     <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2"><Footprints size={18} className="text-primary"/> How to Measure</h4>
+//                     <ol className="list-decimal list-inside text-sm text-gray-600 space-y-2 ml-1">
+//                         <li>Place a piece of paper on the floor against a wall.</li>
+//                         <li>Stand on the paper with your heel firmly against the wall.</li>
+//                         <li>Mark the longest part of your foot (usually the big toe).</li>
+//                         <li>Measure the distance from the edge of the paper to the mark in <strong>cm</strong>.</li>
+//                     </ol>
+//                 </div>
+//                 <div className="p-0">
+//                     <table className="table w-full text-center">
+//                         <thead className="bg-gray-100 sticky top-0">
+//                             <tr><th>EU</th><th>UK</th><th>US (M)</th><th>CM</th></tr>
+//                         </thead>
+//                         <tbody className="text-sm">
+//                             {[
+//                             {eu:'39', uk:'6', us:'7', cm:'24.5'},
+//                             {eu:'40', uk:'6.5', us:'7.5', cm:'25.0'},
+//                             {eu:'41', uk:'7.5', us:'8.5', cm:'26.0'},
+//                             {eu:'42', uk:'8', us:'9', cm:'26.5'},
+//                             {eu:'43', uk:'9', us:'10', cm:'27.5'},
+//                             {eu:'44', uk:'9.5', us:'10.5', cm:'28.0'},
+//                             {eu:'45', uk:'10.5', us:'11.5', cm:'29.0'},
+//                             ].map(r => (
+//                                 <tr key={r.eu} className={selectedSize === r.eu ? 'bg-primary/10 font-bold border-l-4 border-primary' : 'hover:bg-gray-50'}>
+//                                     <td className="py-3">{r.eu}</td><td>{r.uk}</td><td>{r.us}</td><td className="font-mono">{r.cm}</td>
+//                                 </tr>
+//                             ))}
+//                         </tbody>
+//                     </table>
+//                 </div>
+//             </div>
+//             <div className="p-4 border-t bg-white">
+//                <button className="btn btn-primary btn-block text-white" onClick={() => setShowSizeGuide(false)}>Close Guide</button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Success Toast */}
+//       {showSuccessToast && (
+//         <div className="fixed top-24 right-4 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-bounce-in">
+//           <div className="flex items-center gap-3">
+//              <CheckCircle className="text-green-500" />
+//              <div><p className="font-bold">Added to Cart</p></div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default ProductDetail;
 // import { useState, useEffect, useMemo } from 'react';
 // import { useParams, useNavigate } from 'react-router-dom';
 // import axios from 'axios';

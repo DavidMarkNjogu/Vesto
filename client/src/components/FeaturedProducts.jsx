@@ -1,4 +1,4 @@
-// import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, ShoppingBag, Eye, ArrowRight } from 'lucide-react';
@@ -10,10 +10,14 @@ const FeaturedProducts = () => {
 
   useEffect(() => {
     const load = async () => {
-      const data = await syncProducts();
-      // Get highest rated items
-      const featured = (data || []).filter(p => (p.rating || 0) >= 4.5).slice(0, 4);
-      setProducts(featured);
+      try {
+        const data = await syncProducts();
+        // Get highest rated or newest items
+        const featured = (data || []).slice(0, 4);
+        setProducts(featured);
+      } catch (err) {
+        console.error("Failed to load featured products", err);
+      }
     };
     load();
   }, []);
@@ -66,7 +70,7 @@ const FeaturedProducts = () => {
                 <div className="absolute top-4 right-4">
                    <div className="flex items-center gap-1 text-[10px] font-bold bg-white/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
                     <Star size={10} className="fill-yellow-400 text-yellow-400" />
-                    {product.rating}
+                    {product.rating || 4.8}
                   </div>
                 </div>
 
@@ -100,9 +104,6 @@ const FeaturedProducts = () => {
                   <p className="text-xl font-black text-gray-900">
                     <span className="text-xs text-gray-400 font-normal mr-1">KES</span>
                     {Number(product.price).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-400 font-medium line-through">
-                    KES {Number(product.price * 1.2).toLocaleString()}
                   </p>
                 </div>
               </div>
